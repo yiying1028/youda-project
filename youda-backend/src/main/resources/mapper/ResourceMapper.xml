@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.youda.mapper.ResourceMapper">
+
+    <select id="selectResourceList" resultType="com.youda.vo.ResourceListVO">
+        SELECT
+            r.id as resourceId,
+            r.name,
+            r.description,
+            r.file_type as fileType,
+            r.file_size as fileSize,
+            r.download_count as downloadCount,
+            r.create_time as createTime,
+            s.name as subjectName,
+            g.name as gradeName
+        FROM resource r
+        LEFT JOIN subject s ON r.subject_id = s.id
+        LEFT JOIN grade g ON r.grade_id = g.id
+        WHERE r.is_deleted = 0
+        <if test="subjectId != null">
+            AND r.subject_id = #{subjectId}
+        </if>
+        <if test="gradeId != null">
+            AND r.grade_id = #{gradeId}
+        </if>
+        <if test="keyword != null and keyword != ''">
+            AND (r.name LIKE CONCAT('%', #{keyword}, '%') OR r.description LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        ORDER BY r.create_time DESC
+    </select>
+
+</mapper>

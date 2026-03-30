@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#9333ea"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#bg)" rx="36"/>
+  <circle cx="970" cy="170" r="115" fill="rgba(255,255,255,0.08)"/>
+  <circle cx="880" cy="510" r="180" fill="rgba(255,255,255,0.05)"/>
+  <text x="80" y="160" fill="#e9d5ff" font-size="34" font-family="Segoe UI, Arial, sans-serif">MIT OpenCourseWare</text>
+  <text x="80" y="290" fill="#ffffff" font-size="58" font-weight="700" font-family="Segoe UI, Arial, sans-serif">Solid State Chemistry</text>
+  <text x="80" y="380" fill="#f3e8ff" font-size="28" font-family="Segoe UI, Arial, sans-serif">Local demo import with downloadable lecture videos</text>
+</svg>

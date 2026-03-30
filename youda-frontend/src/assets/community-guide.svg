@@ -1,0 +1,19 @@
+﻿<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="community-guide-bg" x1="24" y1="20" x2="132" y2="142" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E6F4FF"/>
+      <stop offset="1" stop-color="#F0F5FF"/>
+    </linearGradient>
+    <linearGradient id="community-guide-accent" x1="53" y1="49" x2="105" y2="111" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4096FF"/>
+      <stop offset="1" stop-color="#0958D9"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="60" fill="url(#community-guide-bg)"/>
+  <circle cx="80" cy="80" r="59" stroke="#B7D7FF" stroke-width="2"/>
+  <path d="M80 48C68.954 48 60 56.954 60 68C60 79.046 68.954 88 80 88C91.046 88 100 79.046 100 68C100 56.954 91.046 48 80 48Z" fill="url(#community-guide-accent)"/>
+  <path d="M58 114C58 101.85 67.85 92 80 92C92.15 92 102 101.85 102 114V117H58V114Z" fill="#69B1FF"/>
+  <path d="M110.5 56L113.893 62.6074L121 66L113.893 69.3926L110.5 76.5L107.107 69.3926L100 66L107.107 62.6074L110.5 56Z" fill="#FFC53D"/>
+  <path d="M47.5 77L49.5311 81.4689L54 83.5L49.5311 85.5311L47.5 90L45.4689 85.5311L41 83.5L45.4689 81.4689L47.5 77Z" fill="#95DE64"/>
+  <path d="M77 65H83V71H89V77H83V83H77V77H71V71H77V65Z" fill="white"/>
+</svg>

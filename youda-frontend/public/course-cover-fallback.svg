@@ -1,0 +1,23 @@
+<svg width="1200" height="720" viewBox="0 0 1200 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="720" rx="36" fill="#F5EBDD"/>
+  <rect x="54" y="54" width="1092" height="612" rx="28" fill="url(#bg)"/>
+  <circle cx="937" cy="166" r="116" fill="#F2C078" fill-opacity="0.26"/>
+  <circle cx="267" cy="590" r="154" fill="#D96B45" fill-opacity="0.16"/>
+  <rect x="120" y="154" width="324" height="44" rx="22" fill="#F7D9A2"/>
+  <rect x="120" y="232" width="546" height="124" rx="28" fill="#FFF8EE" fill-opacity="0.92"/>
+  <rect x="120" y="392" width="252" height="36" rx="18" fill="#F1E0C4"/>
+  <rect x="120" y="452" width="214" height="88" rx="24" fill="#D4653E" fill-opacity="0.14"/>
+  <rect x="742" y="216" width="274" height="286" rx="34" fill="#FFF8EE" fill-opacity="0.76"/>
+  <path d="M840 290L925 343L840 396V290Z" fill="#D4653E"/>
+  <text x="120" y="190" fill="#8B5E34" font-family="'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="24" font-weight="700">YUDA COURSE</text>
+  <text x="120" y="304" fill="#1E232B" font-family="'Noto Serif SC', 'Microsoft YaHei', serif" font-size="66" font-weight="700">精选课程</text>
+  <text x="120" y="348" fill="#1E232B" font-family="'Noto Serif SC', 'Microsoft YaHei', serif" font-size="66" font-weight="700">正在更新</text>
+  <text x="120" y="418" fill="#6A7480" font-family="'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="26">系统课程、方法讲解与知识梳理都在这里。</text>
+  <text x="120" y="506" fill="#9C593C" font-family="'Noto Sans SC', 'Microsoft YaHei', sans-serif" font-size="26" font-weight="700">稳定封面兜底图</text>
+  <defs>
+    <linearGradient id="bg" x1="84" y1="84" x2="1093" y2="644" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7EC"/>
+      <stop offset="1" stop-color="#E7D7C2"/>
+    </linearGradient>
+  </defs>
+</svg>
