@@ -9,14 +9,7 @@
         <div v-if="resource" class="detail-layout">
           <!-- 资料主信息 -->
           <a-card :bordered="false" class="detail-card">
-            <!-- 资料图标和名称 -->
             <div class="detail-header">
-              <div
-                class="file-icon"
-                :style="{ background: getTypeColor(resource.fileType) }"
-              >
-                <file-outlined />
-              </div>
               <div class="detail-title-wrap">
                 <h1 class="detail-title">{{ resource.name }}</h1>
                 <div class="detail-tags">
@@ -89,27 +82,20 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getResourceDetail, downloadResource } from '@/api/index.js'
 import dayjs from 'dayjs'
-import { LeftOutlined, FileOutlined, DownloadOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { LeftOutlined, DownloadOutlined } from '@ant-design/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const resource = ref(null)
 const loading = ref(true)
 
-/**
- * 根据文件类型获取图标背景色
- */
-function getTypeColor(type) {
-  const colorMap = {
-    pdf: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
-    doc: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    docx: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    ppt: 'linear-gradient(135deg, #f093fb, #f5576c)',
-    pptx: 'linear-gradient(135deg, #f093fb, #f5576c)',
-    xls: 'linear-gradient(135deg, #43e97b, #38f9d7)',
-    xlsx: 'linear-gradient(135deg, #43e97b, #38f9d7)'
+function resolveResourceId(value) {
+  const resourceId = Number(value)
+  if (!Number.isInteger(resourceId) || resourceId <= 0) {
+    return null
   }
-  return colorMap[type?.toLowerCase()] || 'linear-gradient(135deg, #667eea, #764ba2)'
+  return resourceId
 }
 
 /**
@@ -135,8 +121,19 @@ function formatDate(date) {
 async function loadResource() {
   loading.value = true
   try {
-    const data = await getResourceDetail(route.params.id)
+    const resourceId = resolveResourceId(route.params.id)
+    if (!resourceId) {
+      resource.value = null
+      return
+    }
+
+    const data = await getResourceDetail(resourceId)
     resource.value = data
+  } catch (error) {
+    resource.value = null
+    if (route.params.id) {
+      message.error(error.message || '资料详情加载失败')
+    }
   } finally {
     loading.value = false
   }
@@ -146,7 +143,11 @@ async function loadResource() {
  * 触发文件下载（在新标签页中打开下载链接）
  */
 function handleDownload() {
-  downloadResource(route.params.id)
+  if (!resource.value?.id) {
+    message.error('资料不存在，无法下载')
+    return
+  }
+  downloadResource(resource.value.id)
 }
 
 onMounted(() => {
@@ -183,28 +184,13 @@ onMounted(() => {
 
 /* 资料头部 */
 .detail-header {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
   margin-bottom: 28px;
   padding-bottom: 24px;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.file-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  color: #fff;
-  flex-shrink: 0;
-}
-
 .detail-title-wrap {
-  flex: 1;
+  min-width: 0;
 }
 
 .detail-title {

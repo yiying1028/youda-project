@@ -74,11 +74,6 @@
             class="resource-card"
             @click="$router.push('/resource/' + item.id)"
           >
-            <!-- 资料图标（根据文件类型显示不同图标颜色） -->
-            <div class="resource-icon" :style="{ background: getTypeColor(item.fileType) }">
-              <file-outlined />
-            </div>
-
             <div class="resource-body">
               <div class="resource-name">{{ item.name }}</div>
               <div class="resource-desc">{{ item.description || '暂无描述' }}</div>
@@ -120,7 +115,6 @@ import { ref, reactive, onMounted } from 'vue'
 import { getResourceList, getSubjectList, getGradeList } from '@/api/index.js'
 import dayjs from 'dayjs'
 import {
-  FileOutlined,
   InboxOutlined,
   CalendarOutlined,
   DownloadOutlined
@@ -142,22 +136,6 @@ const filters = reactive({
   gradeId: null,
   keyword: ''
 })
-
-/**
- * 根据文件类型获取颜色
- */
-function getTypeColor(type) {
-  const colorMap = {
-    pdf: 'linear-gradient(135deg, #ff6b6b, #ee5a24)',
-    doc: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    docx: 'linear-gradient(135deg, #4facfe, #00f2fe)',
-    ppt: 'linear-gradient(135deg, #f093fb, #f5576c)',
-    pptx: 'linear-gradient(135deg, #f093fb, #f5576c)',
-    xls: 'linear-gradient(135deg, #43e97b, #38f9d7)',
-    xlsx: 'linear-gradient(135deg, #43e97b, #38f9d7)'
-  }
-  return colorMap[type?.toLowerCase()] || 'linear-gradient(135deg, #667eea, #764ba2)'
-}
 
 /**
  * 格式化文件大小
@@ -296,8 +274,6 @@ onMounted(() => {
   background: #fff;
   border-radius: 12px;
   padding: 20px;
-  display: flex;
-  gap: 16px;
   cursor: pointer;
   transition: all 0.25s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -308,21 +284,7 @@ onMounted(() => {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
 }
 
-/* 资料图标 */
-.resource-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #fff;
-  flex-shrink: 0;
-}
-
 .resource-body {
-  flex: 1;
   min-width: 0;
 }
 

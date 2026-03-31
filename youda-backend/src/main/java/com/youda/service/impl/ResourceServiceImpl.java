@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Service
 public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> implements ResourceService {
@@ -98,6 +100,11 @@ public class ResourceServiceImpl extends ServiceImpl<ResourceMapper, Resource> i
         Resource resource = this.getById(resourceId);
         if (resource == null) {
             throw new BusinessException("资料不存在");
+        }
+
+        Path filePath = fileUtils.resolveStoragePath(resource.getFilePath());
+        if (filePath == null || !Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+            throw new BusinessException("资料文件不存在，暂时无法下载");
         }
 
         // 增加下载次数

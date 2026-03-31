@@ -62,13 +62,46 @@ public class FileUtils {
      * 删除文件
      */
     public void deleteFile(String filePath) {
-        if (filePath != null && filePath.startsWith("/uploads")) {
-            String realPath = uploadPath + filePath.substring("/uploads".length());
-            File file = new File(realPath);
+        Path resolvedPath = resolveStoragePath(filePath);
+        if (resolvedPath != null) {
+            File file = resolvedPath.toFile();
             if (file.exists()) {
                 file.delete();
             }
         }
+    }
+
+    /**
+     * 将存储路径解析为可直接访问的磁盘绝对路径。
+     * 兼容两种历史格式：
+     * 1. /uploads/...
+     * 2. uploads/...
+     */
+    public Path resolveStoragePath(String filePath) {
+        if (filePath == null || filePath.isBlank()) {
+            return null;
+        }
+
+        Path basePath = Paths.get(uploadPath).toAbsolutePath().normalize();
+
+        if ("/uploads".equals(filePath)) {
+            return basePath;
+        }
+
+        if (filePath.startsWith("/uploads/")) {
+            return basePath.resolve(filePath.substring("/uploads/".length())).normalize();
+        }
+
+        if (filePath.startsWith("uploads/")) {
+            return basePath.resolve(filePath.substring("uploads/".length())).normalize();
+        }
+
+        Path path = Paths.get(filePath);
+        if (path.isAbsolute()) {
+            return path.normalize();
+        }
+
+        return path.toAbsolutePath().normalize();
     }
 
     /**

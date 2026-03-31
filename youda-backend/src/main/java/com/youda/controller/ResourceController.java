@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.youda.common.Result;
 import com.youda.entity.Resource;
 import com.youda.service.ResourceService;
+import com.youda.utils.FileUtils;
 import com.youda.vo.ResourceDetailVO;
 import com.youda.vo.ResourceListVO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -27,6 +27,9 @@ public class ResourceController {
 
     @Autowired
     private ResourceService resourceService;
+
+    @Autowired
+    private FileUtils fileUtils;
 
     /**
      * 获取资料列表
@@ -75,10 +78,13 @@ public class ResourceController {
         Resource resource = resourceService.downloadResource(resourceId);
 
         try {
-            Path filePath = Paths.get(resource.getFilePath());
+            Path filePath = fileUtils.resolveStoragePath(resource.getFilePath());
             UrlResource urlResource = new UrlResource(filePath.toUri());
 
-            String encodedFileName = URLEncoder.encode(resource.getName(), StandardCharsets.UTF_8.toString())
+            String downloadFileName = resource.getFileName() != null && !resource.getFileName().isBlank()
+                    ? resource.getFileName()
+                    : resource.getName();
+            String encodedFileName = URLEncoder.encode(downloadFileName, StandardCharsets.UTF_8.toString())
                     .replaceAll("\\+", "%20");
 
             return ResponseEntity.ok()

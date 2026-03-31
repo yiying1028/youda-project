@@ -71,6 +71,17 @@ const normalizeFavorite = (item = {}) => ({
   postTitle: item.postTitle ?? item.title ?? ''
 })
 
+const normalizeResource = (resource = {}) => {
+  const id = resource.id ?? resource.resourceId ?? null
+
+  return {
+    ...resource,
+    id,
+    resourceId: resource.resourceId ?? id,
+    downloadCount: resource.downloadCount ?? 0
+  }
+}
+
 const normalizeVideo = (video = {}) => ({
   ...video,
   id: video.id ?? video.videoId ?? null,
@@ -164,10 +175,15 @@ export const getPostComments = async (id, params) =>
 export const addComment = (id, data) => request.post(`/post/${id}/comment`, data)
 export const deleteComment = (id) => request.delete(`/comment/${id}`)
 
-export const getResourceList = (params) => request.get('/resource/list', { params })
-export const getResourceDetail = (id) => request.get(`/resource/${id}`)
+export const getResourceList = async (params) =>
+  normalizePage(await request.get('/resource/list', { params }), normalizeResource)
+export const getResourceDetail = async (id) => normalizeResource(await request.get(`/resource/${id}`))
 export const downloadResource = (id) => {
-  window.open(`/api/resource/${id}/download`, '_blank')
+  const resourceId = id?.resourceId ?? id?.id ?? id
+  if (!resourceId) {
+    throw new Error('Invalid resourceId')
+  }
+  window.open(`/api/resource/${resourceId}/download`, '_blank')
 }
 export const uploadResource = (formData) =>
   request.post('/resource/upload', formData, {
