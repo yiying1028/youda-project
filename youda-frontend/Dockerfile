@@ -1,4 +1,7 @@
-FROM node:22-alpine AS build
+ARG NODE_IMAGE=node:22-alpine
+ARG NGINX_IMAGE=nginx:alpine
+
+FROM ${NODE_IMAGE} AS build
 
 WORKDIR /app
 
@@ -8,7 +11,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+FROM ${NGINX_IMAGE}
 
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf

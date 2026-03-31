@@ -1,8 +1,9 @@
-﻿-- 优答·中小学答疑网 数据库初始化脚本
+-- 优答·中小学答疑网 数据库初始化脚本
 -- 创建数据库
 CREATE DATABASE IF NOT EXISTS `youda` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 USE `youda`;
+SET NAMES utf8mb4;
 
 -- =============================================
 -- 1. 用户表
@@ -489,6 +490,5 @@ INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `rema
 (4, 'POST_CREATE', '3', 3, '发布帖子', DATE_SUB(NOW(), INTERVAL 3 DAY)),
 (4, 'COMMENT_CREATE', '2', 1, '发表评论', DATE_SUB(NOW(), INTERVAL 4 DAY)),
 (4, 'WRONG_QUESTION_CREATE', '3', 2, '添加错题', DATE_SUB(NOW(), INTERVAL 1 DAY));
-
 
 

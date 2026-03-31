@@ -38,7 +38,18 @@
 
 ## 快速开始
 
-### 1. 数据库初始化
+### 1. Docker 一键启动（推荐）
+
+```bash
+cd youda-project
+docker compose up -d --build
+```
+
+项目默认会读取仓库根目录的 `.env` 镜像配置。
+
+如果无法访问 Docker Hub，可以改用 `.env.example` 里的镜像站配置；当前仓库已附带一份本地 `.env`，使用的是 `docker.m.daocloud.io`。
+
+### 2. 数据库初始化（手动方式）
 
 ```bash
 # 创建数据库
@@ -47,7 +58,7 @@ CREATE DATABASE youda DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 # 导入表结构（参考04-数据库设计文档.md）
 ```
 
-### 2. 后端启动
+### 3. 后端启动
 
 ```bash
 cd youda-backend
@@ -55,7 +66,7 @@ cd youda-backend
 mvn spring-boot:run
 ```
 
-### 3. 前端启动
+### 4. 前端启动
 
 ```bash
 cd youda-frontend

@@ -1,4 +1,7 @@
-FROM maven:3.9.9-eclipse-temurin-11 AS build
+ARG MAVEN_IMAGE=maven:3.9.9-eclipse-temurin-11
+ARG JRE_IMAGE=eclipse-temurin:11-jre-jammy
+
+FROM ${MAVEN_IMAGE} AS build
 
 WORKDIR /app
 
@@ -8,7 +11,7 @@ RUN mvn dependency:go-offline -B
 COPY src ./src
 RUN mvn clean package -DskipTests -B
 
-FROM eclipse-temurin:11-jre-jammy
+FROM ${JRE_IMAGE}
 
 WORKDIR /app
 
