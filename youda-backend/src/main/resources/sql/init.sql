@@ -492,3 +492,77 @@ INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `rema
 (4, 'WRONG_QUESTION_CREATE', '3', 2, '添加错题', DATE_SUB(NOW(), INTERVAL 1 DAY));
 
 
+
+-- paid purchase extension
+ALTER TABLE `resource`
+    ADD COLUMN `requires_points` TINYINT DEFAULT 0 COMMENT '是否需要积分购买',
+    ADD COLUMN `points_cost` INT DEFAULT 0 COMMENT '购买所需积分';
+
+ALTER TABLE `course`
+    ADD COLUMN `requires_points` TINYINT DEFAULT 0 COMMENT '是否需要积分购买',
+    ADD COLUMN `points_cost` INT DEFAULT 0 COMMENT '购买所需积分';
+
+DROP TABLE IF EXISTS `resource_purchase`;
+CREATE TABLE `resource_purchase` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `resource_id` BIGINT NOT NULL,
+    `points_cost` INT NOT NULL,
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_resource` (`user_id`, `resource_id`),
+    KEY `idx_resource_purchase_user` (`user_id`),
+    KEY `idx_resource_purchase_resource` (`resource_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资料购买记录';
+
+DROP TABLE IF EXISTS `course_purchase`;
+CREATE TABLE `course_purchase` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `user_id` BIGINT NOT NULL,
+    `course_id` BIGINT NOT NULL,
+    `points_cost` INT NOT NULL,
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_course` (`user_id`, `course_id`),
+    KEY `idx_course_purchase_user` (`user_id`),
+    KEY `idx_course_purchase_course` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程购买记录';
+
+-- paid sample data for testing
+UPDATE `resource` SET `requires_points` = 1, `points_cost` = 6 WHERE `id` = 2;
+UPDATE `resource` SET `requires_points` = 1, `points_cost` = 14 WHERE `id` = 3;
+UPDATE `course` SET `requires_points` = 1, `points_cost` = 12 WHERE `id` = 2;
+
+INSERT INTO `resource` (`name`, `description`, `file_name`, `file_path`, `file_type`, `file_size`, `subject_id`, `grade_id`, `user_id`, `download_count`, `requires_points`, `points_cost`, `create_time`) VALUES
+('初中数学压轴题错因清单（积分版）', '适合初二阶段复盘函数与几何压轴题的常见错因，购买后可直接下载。', 'math-function-summary.txt', 'uploads/resource/demo/math-function-summary.txt', 'txt', 2048, 2, 8, 2, 0, 1, 9, DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+INSERT INTO `course` (`name`, `description`, `cover_image`, `teacher_name`, `subject_id`, `grade_id`, `chapter_count`, `student_count`, `requires_points`, `points_cost`, `create_time`, `update_time`) VALUES
+('初中物理受力分析专项提升（积分课）', '围绕受力分析、斜面摩擦力和多物体连接模型设计的进阶课程。', 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Physics_classroom.jpg', '林老师', 4, 9, 1, 0, 1, 16, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+INSERT INTO `course_chapter` (`course_id`, `title`, `sort`, `create_time`) VALUES
+(3, '受力分析进阶模板', 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO `course_video` (`course_id`, `chapter_id`, `title`, `video_url`, `duration`, `sort`, `create_time`) VALUES
+(3, 5, '三步完成复杂受力分析', 'https://filesamples.com/samples/video/mp4/sample_640x360.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+-- extra points purchase test accounts
+INSERT INTO `user` (`username`, `password`, `nickname`, `avatar`, `phone`, `bio`, `points`, `role`, `status`)
+SELECT 'points_tester', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', 'Points Tester', 'https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_photography.jpg', '13900000011', 'Manual points purchase testing account', 80, 0, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `user` WHERE `username` = 'points_tester');
+
+INSERT INTO `user` (`username`, `password`, `nickname`, `avatar`, `phone`, `bio`, `points`, `role`, `status`)
+SELECT 'points_buyer', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', 'Points Buyer', 'https://upload.wikimedia.org/wikipedia/commons/1/1e/PORTRAIT_PICTURE.jpg', '13900000012', 'Automated points purchase verification account', 80, 0, 1
+FROM DUAL
+WHERE NOT EXISTS (SELECT 1 FROM `user` WHERE `username` = 'points_buyer');
+
+INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `remark`)
+SELECT `id`, 'ADMIN_GRANT', 'seed-points-tester-20260403', 80, '初始化测试积分'
+FROM `user`
+WHERE `username` = 'points_tester'
+  AND NOT EXISTS (SELECT 1 FROM `points_record` WHERE `action_type` = 'ADMIN_GRANT' AND `biz_id` = 'seed-points-tester-20260403');
+
+INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `remark`)
+SELECT `id`, 'ADMIN_GRANT', 'seed-points-buyer-20260403', 80, '初始化测试积分'
+FROM `user`
+WHERE `username` = 'points_buyer'
+  AND NOT EXISTS (SELECT 1 FROM `points_record` WHERE `action_type` = 'ADMIN_GRANT' AND `biz_id` = 'seed-points-buyer-20260403');

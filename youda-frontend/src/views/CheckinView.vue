@@ -57,7 +57,9 @@
                     {{ formatTime(item.createTime) }} {{ item.remark || '' }}
                   </div>
                 </div>
-                <div class="record-points">+{{ item.points }}</div>
+                <div class="record-points" :class="{ negative: item.points < 0 }">
+                  {{ item.points > 0 ? '+' : '' }}{{ item.points }}
+                </div>
               </div>
             </div>
             <div v-if="total > 0" class="pagination-wrap">
@@ -180,6 +182,7 @@ onMounted(async () => {
 .record-title { font-weight: 600; margin-bottom: 4px; }
 .record-time { color: #8c8c8c; font-size: 13px; }
 .record-points { color: #1677ff; font-size: 18px; font-weight: 700; }
+.record-points.negative { color: #cf1322; }
 .pagination-wrap { margin-top: 16px; display: flex; justify-content: center; }
 @media (max-width: 768px) {
   .checkin-inner { padding: 16px; }

@@ -4,9 +4,6 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 资料列表VO
- */
 @Data
 public class ResourceListVO {
 
@@ -25,6 +22,14 @@ public class ResourceListVO {
     private Long fileSize;
 
     private Integer downloadCount;
+
+    private Boolean requiresPoints;
+
+    private Integer pointsCost;
+
+    private Boolean purchased;
+
+    private Boolean canDownload;
 
     private LocalDateTime createTime;
 }

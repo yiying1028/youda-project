@@ -16,6 +16,8 @@ public interface PointsService {
 
     void rewardChapterComplete(Long userId, Long chapterId);
 
+    void spendPoints(Long userId, String actionType, String bizId, int points, String remark);
+
     PointsOverviewVO getOverview();
 
     Map<String, Object> checkIn();

@@ -11,6 +11,8 @@
             c.teacher_name as teacherName,
             c.chapter_count as chapterCount,
             c.student_count as studentCount,
+            c.requires_points as requiresPoints,
+            c.points_cost as pointsCost,
             c.create_time as createTime,
             s.name as subjectName,
             g.name as gradeName

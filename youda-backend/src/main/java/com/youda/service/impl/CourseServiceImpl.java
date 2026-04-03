@@ -8,12 +8,14 @@ import com.youda.common.BusinessException;
 import com.youda.dto.ProgressUpdateDTO;
 import com.youda.entity.Course;
 import com.youda.entity.CourseChapter;
+import com.youda.entity.CoursePurchase;
 import com.youda.entity.CourseVideo;
 import com.youda.entity.Grade;
 import com.youda.entity.LearningProgress;
 import com.youda.entity.Subject;
 import com.youda.mapper.CourseChapterMapper;
 import com.youda.mapper.CourseMapper;
+import com.youda.mapper.CoursePurchaseMapper;
 import com.youda.mapper.CourseVideoMapper;
 import com.youda.mapper.GradeMapper;
 import com.youda.mapper.LearningProgressMapper;
@@ -29,6 +31,7 @@ import com.youda.vo.VideoPlayVO;
 import com.youda.vo.VideoVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +41,8 @@ import java.util.Map;
 
 @Service
 public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> implements CourseService {
+
+    private static final String ACTION_COURSE_PURCHASE = "COURSE_PURCHASE";
 
     @Autowired
     private CourseChapterMapper chapterMapper;
@@ -55,21 +60,25 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     private GradeMapper gradeMapper;
 
     @Autowired
+    private CoursePurchaseMapper coursePurchaseMapper;
+
+    @Autowired
     private PointsService pointsService;
 
     @Override
     public IPage<CourseListVO> getCourseList(Integer current, Integer size, Long subjectId, Long gradeId, String keyword) {
         Page<CourseListVO> page = new Page<>(current, size);
-        return baseMapper.selectCourseList(page, subjectId, gradeId, keyword);
+        IPage<CourseListVO> result = baseMapper.selectCourseList(page, subjectId, gradeId, keyword);
+        Long currentUserId = UserContext.getCurrentUserIdOrNull();
+        for (CourseListVO item : result.getRecords()) {
+            fillCourseAccessState(item, currentUserId);
+        }
+        return result;
     }
 
     @Override
     public CourseDetailVO getCourseDetail(Long courseId) {
-        Course course = this.getById(courseId);
-        if (course == null) {
-            throw new BusinessException("课程不存在");
-        }
-
+        Course course = requireCourse(courseId);
         CourseDetailVO vo = new CourseDetailVO();
         vo.setCourseId(course.getId());
         vo.setName(course.getName());
@@ -77,6 +86,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         vo.setCoverImage(course.getCoverImage());
         vo.setTeacherName(course.getTeacherName());
         vo.setStudentCount(course.getStudentCount());
+        vo.setRequiresPoints(isPaidCourse(course));
+        vo.setPointsCost(isPaidCourse(course) ? normalizeCost(course.getPointsCost()) : 0);
 
         Subject subject = subjectMapper.selectById(course.getSubjectId());
         if (subject != null) {
@@ -88,6 +99,11 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             vo.setGradeName(grade.getName());
         }
 
+        Long currentUserId = UserContext.getCurrentUserIdOrNull();
+        boolean purchased = currentUserId != null && hasCoursePurchase(currentUserId, courseId);
+        vo.setPurchased(purchased);
+        vo.setCanLearn(!isPaidCourse(course) || purchased);
+
         List<CourseChapter> chapters = chapterMapper.selectList(
                 new LambdaQueryWrapper<CourseChapter>()
                         .eq(CourseChapter::getCourseId, courseId)
@@ -97,7 +113,6 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         List<ChapterVO> chapterVOList = new ArrayList<>();
         int totalVideos = 0;
         int completedVideos = 0;
-        Long currentUserId = UserContext.getCurrentUserIdOrNull();
 
         for (CourseChapter chapter : chapters) {
             ChapterVO chapterVO = new ChapterVO();
@@ -116,6 +131,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
                 videoVO.setVideoId(video.getId());
                 videoVO.setTitle(video.getTitle());
                 videoVO.setDuration(video.getDuration());
+                videoVO.setIsFinished(false);
                 videoVOList.add(videoVO);
                 totalVideos++;
 
@@ -127,6 +143,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
                     );
                     if (progress != null && progress.getIsCompleted() == 1) {
                         completedVideos++;
+                        videoVO.setIsFinished(true);
                     }
                 }
             }
@@ -146,11 +163,40 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     }
 
     @Override
+    @Transactional
+    public Map<String, Object> purchaseCourse(Long courseId) {
+        Long userId = UserContext.getCurrentUserId();
+        Course course = requireCourse(courseId);
+        if (!isPaidCourse(course)) {
+            throw new BusinessException(400, "免费课程无需购买");
+        }
+        if (hasCoursePurchase(userId, courseId)) {
+            throw new BusinessException(400, "该课程已购买");
+        }
+
+        int cost = normalizeCost(course.getPointsCost());
+        pointsService.spendPoints(userId, ACTION_COURSE_PURCHASE, String.valueOf(courseId), cost, "购买课程：" + course.getName());
+
+        CoursePurchase purchase = new CoursePurchase();
+        purchase.setUserId(userId);
+        purchase.setCourseId(courseId);
+        purchase.setPointsCost(cost);
+        coursePurchaseMapper.insert(purchase);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("courseId", courseId);
+        result.put("pointsCost", cost);
+        return result;
+    }
+
+    @Override
     public VideoPlayVO getVideoPlayInfo(Long videoId) {
+        Long currentUserId = UserContext.getCurrentUserId();
         CourseVideo video = videoMapper.selectById(videoId);
         if (video == null) {
-            throw new BusinessException("视频不存在");
+            throw new BusinessException(400, "视频不存在");
         }
+        ensureCourseAccessible(currentUserId, video.getCourseId());
 
         VideoPlayVO vo = new VideoPlayVO();
         vo.setVideoId(video.getId());
@@ -158,17 +204,12 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         vo.setVideoUrl(video.getVideoUrl());
         vo.setDuration(video.getDuration());
 
-        Long currentUserId = UserContext.getCurrentUserIdOrNull();
-        if (currentUserId != null) {
-            LearningProgress progress = progressMapper.selectOne(
-                    new LambdaQueryWrapper<LearningProgress>()
-                            .eq(LearningProgress::getUserId, currentUserId)
-                            .eq(LearningProgress::getVideoId, videoId)
-            );
-            vo.setLastPosition(progress != null ? progress.getPosition() : 0);
-        } else {
-            vo.setLastPosition(0);
-        }
+        LearningProgress progress = progressMapper.selectOne(
+                new LambdaQueryWrapper<LearningProgress>()
+                        .eq(LearningProgress::getUserId, currentUserId)
+                        .eq(LearningProgress::getVideoId, videoId)
+        );
+        vo.setLastPosition(progress != null ? progress.getPosition() : 0);
 
         List<CourseVideo> allVideos = videoMapper.selectList(
                 new LambdaQueryWrapper<CourseVideo>()
@@ -193,8 +234,9 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         Long userId = UserContext.getCurrentUserId();
         CourseVideo video = videoMapper.selectById(videoId);
         if (video == null) {
-            throw new BusinessException("视频不存在");
+            throw new BusinessException(400, "视频不存在");
         }
+        ensureCourseAccessible(userId, video.getCourseId());
 
         boolean isCompleted = dto.getDuration() > 0 && dto.getPosition() >= dto.getDuration() * 0.9;
         LearningProgress progress = progressMapper.selectOne(
@@ -219,7 +261,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
                             .eq(LearningProgress::getCourseId, video.getCourseId())
             );
             if (currentCourseProgressCount == 1) {
-                Course course = this.getById(video.getCourseId());
+                Course course = requireCourse(video.getCourseId());
                 course.setStudentCount(course.getStudentCount() + 1);
                 this.updateById(course);
             }
@@ -285,6 +327,49 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         }
 
         return records;
+    }
+
+    private void fillCourseAccessState(CourseListVO item, Long currentUserId) {
+        boolean requiresPoints = Boolean.TRUE.equals(item.getRequiresPoints()) && normalizeCost(item.getPointsCost()) > 0;
+        boolean purchased = requiresPoints && currentUserId != null && hasCoursePurchase(currentUserId, item.getCourseId());
+        item.setRequiresPoints(requiresPoints);
+        item.setPointsCost(requiresPoints ? normalizeCost(item.getPointsCost()) : 0);
+        item.setPurchased(purchased);
+        item.setCanLearn(!requiresPoints || purchased);
+    }
+
+    private void ensureCourseAccessible(Long userId, Long courseId) {
+        Course course = requireCourse(courseId);
+        if (!isPaidCourse(course)) {
+            return;
+        }
+        if (!hasCoursePurchase(userId, courseId)) {
+            throw new BusinessException(400, "请先购买该课程后再学习");
+        }
+    }
+
+    private boolean hasCoursePurchase(Long userId, Long courseId) {
+        return coursePurchaseMapper.selectCount(
+                new LambdaQueryWrapper<CoursePurchase>()
+                        .eq(CoursePurchase::getUserId, userId)
+                        .eq(CoursePurchase::getCourseId, courseId)
+        ) > 0;
+    }
+
+    private boolean isPaidCourse(Course course) {
+        return course.getRequiresPoints() != null && course.getRequiresPoints() == 1 && normalizeCost(course.getPointsCost()) > 0;
+    }
+
+    private int normalizeCost(Integer pointsCost) {
+        return pointsCost == null || pointsCost < 0 ? 0 : pointsCost;
+    }
+
+    private Course requireCourse(Long courseId) {
+        Course course = this.getById(courseId);
+        if (course == null) {
+            throw new BusinessException(400, "课程不存在");
+        }
+        return course;
     }
 
     private boolean isChapterCompleted(Long userId, Long chapterId) {

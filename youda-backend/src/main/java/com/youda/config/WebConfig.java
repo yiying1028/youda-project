@@ -35,17 +35,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
                         "/api/user/login",
-                        "/api/user/register",
-                        "/api/category/list",
-                        "/api/subject/list",
-                        "/api/grade/list",
-                        "/api/post/list",
-                        "/api/post/*",
-                        "/api/resource/list",
-                        "/api/resource/*",
-                        "/api/course/list",
-                        "/api/course/*",
-                        "/api/announcement/list"
+                        "/api/user/register"
                 );
     }
 
@@ -55,3 +45,4 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations(Paths.get(uploadPath).toAbsolutePath().normalize().toUri().toString());
     }
 }
+

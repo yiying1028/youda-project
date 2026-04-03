@@ -4,9 +4,6 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 课程列表VO
- */
 @Data
 public class CourseListVO {
 
@@ -27,6 +24,14 @@ public class CourseListVO {
     private Integer chapterCount;
 
     private Integer studentCount;
+
+    private Boolean requiresPoints;
+
+    private Integer pointsCost;
+
+    private Boolean purchased;
+
+    private Boolean canLearn;
 
     private LocalDateTime createTime;
 }

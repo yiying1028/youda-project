@@ -1,13 +1,15 @@
 package com.youda.entity;
 
-import com.baomidou.mybatisplus.annotation.*;
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 学习资料实体
- */
 @Data
 @TableName("resource")
 public class Resource {
@@ -31,7 +33,13 @@ public class Resource {
 
     private Long gradeId;
 
+    private Long userId;
+
     private Integer downloadCount;
+
+    private Integer requiresPoints;
+
+    private Integer pointsCost;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

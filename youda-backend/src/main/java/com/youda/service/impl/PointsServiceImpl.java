@@ -35,6 +35,8 @@ public class PointsServiceImpl implements PointsService {
     private static final String ACTION_COMMENT_CREATE = "COMMENT_CREATE";
     private static final String ACTION_CHAPTER_COMPLETE = "CHAPTER_COMPLETE";
     private static final String ACTION_WRONG_QUESTION_CREATE = "WRONG_QUESTION_CREATE";
+    private static final String ACTION_COURSE_PURCHASE = "COURSE_PURCHASE";
+    private static final String ACTION_RESOURCE_PURCHASE = "RESOURCE_PURCHASE";
 
     @Autowired
     private UserMapper userMapper;
@@ -70,6 +72,31 @@ public class PointsServiceImpl implements PointsService {
     }
 
     @Override
+    @Transactional
+    public void spendPoints(Long userId, String actionType, String bizId, int points, String remark) {
+        if (points <= 0) {
+            throw new BusinessException(400, "扣减积分必须大于 0");
+        }
+
+        User user = requireUser(userId);
+        int currentPoints = user.getPoints() == null ? 0 : user.getPoints();
+        if (currentPoints < points) {
+            throw new BusinessException(400, "积分不足");
+        }
+
+        PointsRecord record = new PointsRecord();
+        record.setUserId(userId);
+        record.setActionType(actionType);
+        record.setBizId(bizId);
+        record.setPoints(-points);
+        record.setRemark(remark);
+        pointsRecordMapper.insert(record);
+
+        user.setPoints(currentPoints - points);
+        userMapper.updateById(user);
+    }
+
+    @Override
     public PointsOverviewVO getOverview() {
         Long userId = UserContext.getCurrentUserId();
         User user = requireUser(userId);
@@ -79,7 +106,9 @@ public class PointsServiceImpl implements PointsService {
         vo.setPoints(user.getPoints() == null ? 0 : user.getPoints());
         vo.setTodayEarnedPoints(sumTodayPoints(userId));
         vo.setTodayCheckedIn(hasCheckedIn(userId, today));
-        vo.setContinuousDays(vo.getTodayCheckedIn() ? calculateContinuousDays(userId, today) : calculateContinuousDays(userId, today.minusDays(1)));
+        vo.setContinuousDays(vo.getTodayCheckedIn()
+                ? calculateContinuousDays(userId, today)
+                : calculateContinuousDays(userId, today.minusDays(1)));
         vo.setTotalCheckinDays(Math.toIntExact(userCheckinMapper.selectCount(
                 new LambdaQueryWrapper<UserCheckin>().eq(UserCheckin::getUserId, userId)
         )));
@@ -93,7 +122,7 @@ public class PointsServiceImpl implements PointsService {
         Long userId = UserContext.getCurrentUserId();
         LocalDate today = LocalDate.now();
         if (hasCheckedIn(userId, today)) {
-            throw new BusinessException("今天已经签到过了");
+            throw new BusinessException(400, "今天已经签到过了");
         }
 
         int streakDays = calculateContinuousDays(userId, today.minusDays(1)) + 1;
@@ -291,6 +320,10 @@ public class PointsServiceImpl implements PointsService {
                 return "完成课程章节";
             case ACTION_WRONG_QUESTION_CREATE:
                 return "添加错题";
+            case ACTION_COURSE_PURCHASE:
+                return "购买课程";
+            case ACTION_RESOURCE_PURCHASE:
+                return "购买资料";
             default:
                 return actionType;
         }
@@ -299,7 +332,7 @@ public class PointsServiceImpl implements PointsService {
     private User requireUser(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new BusinessException("用户不存在");
+            throw new BusinessException(400, "用户不存在");
         }
         return user;
     }

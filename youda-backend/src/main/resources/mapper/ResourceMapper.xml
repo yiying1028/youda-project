@@ -10,6 +10,8 @@
             r.file_type as fileType,
             r.file_size as fileSize,
             r.download_count as downloadCount,
+            r.requires_points as requiresPoints,
+            r.points_cost as pointsCost,
             r.create_time as createTime,
             s.name as subjectName,
             g.name as gradeName

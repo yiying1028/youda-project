@@ -12,7 +12,13 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
@@ -31,9 +37,6 @@ public class ResourceController {
     @Autowired
     private FileUtils fileUtils;
 
-    /**
-     * 获取资料列表
-     */
     @GetMapping("/list")
     public Result<IPage<ResourceListVO>> getResourceList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -41,22 +44,19 @@ public class ResourceController {
             @RequestParam(required = false) Long subjectId,
             @RequestParam(required = false) Long gradeId,
             @RequestParam(required = false) String keyword) {
-        IPage<ResourceListVO> page = resourceService.getResourceList(current, size, subjectId, gradeId, keyword);
-        return Result.success(page);
+        return Result.success(resourceService.getResourceList(current, size, subjectId, gradeId, keyword));
     }
 
-    /**
-     * 获取资料详情
-     */
     @GetMapping("/{resourceId}")
     public Result<ResourceDetailVO> getResourceDetail(@PathVariable Long resourceId) {
-        ResourceDetailVO vo = resourceService.getResourceDetail(resourceId);
-        return Result.success(vo);
+        return Result.success(resourceService.getResourceDetail(resourceId));
     }
 
-    /**
-     * 上传资料
-     */
+    @PostMapping("/{resourceId}/purchase")
+    public Result<Map<String, Object>> purchaseResource(@PathVariable Long resourceId) {
+        return Result.success("购买成功", resourceService.purchaseResource(resourceId));
+    }
+
     @PostMapping("/upload")
     public Result<Map<String, Long>> uploadResource(
             @RequestParam("file") MultipartFile file,
@@ -70,9 +70,6 @@ public class ResourceController {
         return Result.success("上传成功", data);
     }
 
-    /**
-     * 下载资料
-     */
     @GetMapping("/{resourceId}/download")
     public ResponseEntity<org.springframework.core.io.Resource> downloadResource(@PathVariable Long resourceId) {
         Resource resource = resourceService.downloadResource(resourceId);
@@ -96,9 +93,6 @@ public class ResourceController {
         }
     }
 
-    /**
-     * 删除资料
-     */
     @DeleteMapping("/{resourceId}")
     public Result<?> deleteResource(@PathVariable Long resourceId) {
         resourceService.deleteResource(resourceId);

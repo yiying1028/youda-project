@@ -1,3 +1,4 @@
+import axios from 'axios'
 import request from '@/utils/request.js'
 
 const normalizeChatId = (value, seen = new WeakSet()) => {
@@ -73,12 +74,17 @@ const normalizeFavorite = (item = {}) => ({
 
 const normalizeResource = (resource = {}) => {
   const id = resource.id ?? resource.resourceId ?? null
+  const requiresPoints = Boolean(resource.requiresPoints)
 
   return {
     ...resource,
     id,
     resourceId: resource.resourceId ?? id,
-    downloadCount: resource.downloadCount ?? 0
+    downloadCount: resource.downloadCount ?? 0,
+    requiresPoints,
+    pointsCost: resource.pointsCost ?? 0,
+    purchased: Boolean(resource.purchased),
+    canDownload: resource.canDownload !== undefined ? Boolean(resource.canDownload) : !requiresPoints
   }
 }
 
@@ -100,6 +106,7 @@ const normalizeChapter = (chapter = {}) => ({
 const normalizeCourse = (course = {}) => {
   const chapters = Array.isArray(course.chapters) ? course.chapters.map(normalizeChapter) : []
   const derivedVideoCount = chapters.reduce((total, chapter) => total + (chapter.videos?.length || 0), 0)
+  const requiresPoints = Boolean(course.requiresPoints)
 
   return {
     ...course,
@@ -111,6 +118,10 @@ const normalizeCourse = (course = {}) => {
     studentCount: course.studentCount ?? course.learnCount ?? 0,
     chapterCount: course.chapterCount ?? chapters.length,
     videoCount: course.videoCount ?? (derivedVideoCount > 0 ? derivedVideoCount : (course.chapterCount ?? 0)),
+    requiresPoints,
+    pointsCost: course.pointsCost ?? 0,
+    purchased: Boolean(course.purchased),
+    canLearn: course.canLearn !== undefined ? Boolean(course.canLearn) : !requiresPoints,
     chapters
   }
 }
@@ -127,6 +138,39 @@ const normalizeVideoPlay = (video = {}) => ({
   nextVideoId: video.nextVideoId ?? null
 })
 
+const resolveDownloadFileName = (headers = {}, fallback = 'resource-download') => {
+  const disposition = headers['content-disposition'] || headers['Content-Disposition'] || ''
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1])
+  }
+  const plainMatch = disposition.match(/filename=\"?([^\";]+)\"?/i)
+  if (plainMatch?.[1]) {
+    return plainMatch[1]
+  }
+  return fallback
+}
+
+const normalizeDownloadError = async (error) => {
+  if (error.response?.status === 401) {
+    localStorage.removeItem('youda_token')
+    localStorage.removeItem('youda_userInfo')
+    window.location.href = '/login'
+    return new Error('Login expired, please sign in again')
+  }
+
+  if (error.response?.data instanceof Blob) {
+    try {
+      const text = await error.response.data.text()
+      const payload = JSON.parse(text)
+      return new Error(payload.message || 'Download failed')
+    } catch {
+      return new Error('Download failed')
+    }
+  }
+
+  return new Error(error.response?.data?.message || error.message || 'Download failed')
+}
 const normalizePage = (result, itemMapper) => {
   if (!result) return result
   if (Array.isArray(result)) {
@@ -172,12 +216,34 @@ export const deleteComment = (id) => request.delete(`/comment/${id}`)
 export const getResourceList = async (params) =>
   normalizePage(await request.get('/resource/list', { params }), normalizeResource)
 export const getResourceDetail = async (id) => normalizeResource(await request.get(`/resource/${id}`))
-export const downloadResource = (id) => {
+export const purchaseResource = (id) => request.post(`/resource/${id}/purchase`)
+export const downloadResource = async (id) => {
   const resourceId = id?.resourceId ?? id?.id ?? id
   if (!resourceId) {
     throw new Error('Invalid resourceId')
   }
-  window.open(`/api/resource/${resourceId}/download`, '_blank')
+
+  try {
+    const token = localStorage.getItem('youda_token')
+    const response = await axios.get(`/api/resource/${resourceId}/download`, {
+      responseType: 'blob',
+      timeout: 30000,
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    })
+
+    const fileName = resolveDownloadFileName(response.headers, `resource-${resourceId}`)
+    const blobUrl = window.URL.createObjectURL(response.data)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.setTimeout(() => window.URL.revokeObjectURL(blobUrl), 0)
+    return true
+  } catch (error) {
+    throw await normalizeDownloadError(error)
+  }
 }
 export const uploadResource = (formData) => request.post('/resource/upload', formData)
 
@@ -190,6 +256,7 @@ export const uploadChatImage = (formData) => request.post('/chat/upload-image', 
 
 export const getCourseList = async (params) => normalizePage(await request.get('/course/list', { params }), normalizeCourse)
 export const getCourseDetail = async (id) => normalizeCourse(await request.get(`/course/${id}`))
+export const purchaseCourse = (id) => request.post(`/course/${id}/purchase`)
 export const getVideoInfo = async (id) => normalizeVideoPlay(await request.get(`/course/video/${id}`))
 export const updateVideoProgress = (id, data) => request.post(`/course/video/${id}/progress`, data)
 export const getLearningRecords = () => request.get('/course/learning-records')

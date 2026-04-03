@@ -4,9 +4,6 @@ import lombok.Data;
 
 import java.util.List;
 
-/**
- * 课程详情VO
- */
 @Data
 public class CourseDetailVO {
 
@@ -25,6 +22,14 @@ public class CourseDetailVO {
     private String gradeName;
 
     private Integer studentCount;
+
+    private Boolean requiresPoints;
+
+    private Integer pointsCost;
+
+    private Boolean purchased;
+
+    private Boolean canLearn;
 
     private List<ChapterVO> chapters;
 

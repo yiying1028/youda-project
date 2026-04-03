@@ -2,9 +2,6 @@ package com.youda.vo;
 
 import lombok.Data;
 
-/**
- * 视频VO
- */
 @Data
 public class VideoVO {
 
@@ -13,4 +10,6 @@ public class VideoVO {
     private String title;
 
     private Integer duration;
+
+    private Boolean isFinished;
 }

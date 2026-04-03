@@ -4,45 +4,24 @@ import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName("course")
-public class Course {
+@TableName("resource_purchase")
+public class ResourcePurchase {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String name;
+    private Long userId;
 
-    private String description;
-
-    private String coverImage;
-
-    private String teacherName;
-
-    private Long subjectId;
-
-    private Long gradeId;
-
-    private Integer chapterCount;
-
-    private Integer studentCount;
-
-    private Integer requiresPoints;
+    private Long resourceId;
 
     private Integer pointsCost;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    @TableField(fill = FieldFill.INSERT_UPDATE)
-    private LocalDateTime updateTime;
-
-    @TableLogic
-    private Integer isDeleted;
 }

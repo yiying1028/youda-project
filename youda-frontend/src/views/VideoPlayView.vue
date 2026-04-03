@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="video-play-page">
     <div class="play-header">
       <a-button type="link" class="back-btn" @click="$router.push('/course/' + courseId)">
@@ -179,6 +179,12 @@ async function loadVideo() {
     const data = await getVideoInfo(currentVideoId.value)
     activeVideoId.value = currentVideoId.value
     videoInfo.value = data
+  } catch {
+    videoInfo.value = null
+    message.warning('当前课程尚未解锁，已返回课程详情页')
+    if (isValidId(courseId.value)) {
+      router.replace(`/course/${courseId.value}`)
+    }
   } finally {
     videoLoading.value = false
   }
