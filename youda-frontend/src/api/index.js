@@ -146,10 +146,7 @@ export const userLogin = (data) => request.post('/user/login', data)
 export const getUserInfo = () => request.get('/user/info')
 export const updateUserInfo = (data) => request.put('/user/info', data)
 export const updatePassword = (data) => request.put('/user/password', data)
-export const uploadAvatar = (formData) =>
-  request.post('/user/avatar', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const uploadAvatar = (formData) => request.post('/user/avatar', formData)
 export const getMyPosts = async (params) => normalizePage(await request.get('/user/posts', { params }), normalizePost)
 export const getMyFavorites = async (params) =>
   normalizePage(await request.get('/user/favorites', { params }), normalizeFavorite)
@@ -159,10 +156,7 @@ export const getSubjectList = () => request.get('/subject/list')
 export const getGradeList = () => request.get('/grade/list')
 export const getAnnouncementList = (params) => request.get('/announcement/list', { params })
 
-export const commonUpload = (formData) =>
-  request.post('/common/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const commonUpload = (formData) => request.post('/common/upload', formData)
 
 export const getPostList = async (params) => normalizePage(await request.get('/post/list', { params }), normalizePost)
 export const getPostDetail = async (id) => normalizePost(await request.get(`/post/${id}`))
@@ -185,20 +179,14 @@ export const downloadResource = (id) => {
   }
   window.open(`/api/resource/${resourceId}/download`, '_blank')
 }
-export const uploadResource = (formData) =>
-  request.post('/resource/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const uploadResource = (formData) => request.post('/resource/upload', formData)
 
 export const createChatSession = () => request.post('/chat/create')
 export const getChatList = (params) => request.get('/chat/list', { params })
 export const getChatDetail = (chatId) => request.get(`/chat/${resolveChatId(chatId)}`)
 export const sendMessage = (chatId, data) => request.post(`/chat/${resolveChatId(chatId)}/message`, data)
 export const deleteChat = (chatId) => request.delete(`/chat/${resolveChatId(chatId)}`)
-export const uploadChatImage = (formData) =>
-  request.post('/chat/upload-image', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const uploadChatImage = (formData) => request.post('/chat/upload-image', formData)
 
 export const getCourseList = async (params) => normalizePage(await request.get('/course/list', { params }), normalizeCourse)
 export const getCourseDetail = async (id) => normalizeCourse(await request.get(`/course/${id}`))
@@ -235,10 +223,7 @@ export const adminAddCourse = (data) => request.post('/admin/course', data)
 export const adminUpdateCourse = (id, data) => request.put(`/admin/course/${id}`, data)
 export const adminDeleteCourse = (id) => request.delete(`/admin/course/${id}`)
 export const adminAddChapter = (courseId, data) => request.post(`/admin/course/${courseId}/chapter`, data)
-export const adminUploadVideo = (chapterId, formData) =>
-  request.post(`/admin/chapter/${chapterId}/video`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  })
+export const adminUploadVideo = (chapterId, formData) => request.post(`/admin/chapter/${chapterId}/video`, formData)
 export const getAdminAnnouncementList = (params) => request.get('/admin/announcement/list', { params })
 export const adminAddAnnouncement = (data) => request.post('/admin/announcement', data)
 export const adminUpdateAnnouncement = (id, data) => request.put(`/admin/announcement/${id}`, data)

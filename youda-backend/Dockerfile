@@ -4,6 +4,7 @@ ARG JRE_IMAGE=eclipse-temurin:11-jre-jammy
 FROM ${MAVEN_IMAGE} AS build
 
 WORKDIR /app
+ENV MAVEN_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"
 
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
