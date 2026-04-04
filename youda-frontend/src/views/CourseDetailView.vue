@@ -18,7 +18,7 @@
                   </a-tag>
                 </div>
                 <h1 class="banner-title">{{ course.name }}</h1>
-                <p class="banner-desc">{{ course.description }}</p>
+                <p class="banner-desc">{{ course.description || '该课程暂时没有补充说明。' }}</p>
                 <div class="banner-meta">
                   <span><user-outlined /> 主讲：{{ course.teacherName || '优答教师' }}</span>
                   <span><play-circle-outlined /> {{ course.videoCount || 0 }} 节课</span>
@@ -34,7 +34,7 @@
             </div>
 
             <a-card :bordered="false" class="chapters-card" title="课程目录">
-              <div v-if="!chapters.length" class="empty-chapters">课程内容整理中，稍后再来看。</div>
+              <div v-if="!chapters.length" class="empty-chapters">课程内容整理中，稍后再来查看。</div>
               <a-collapse v-else v-model:activeKey="openChapters" :bordered="false" class="chapter-collapse">
                 <a-collapse-panel v-for="chapter in chapters" :key="chapter.id" class="chapter-panel">
                   <template #header>
@@ -70,7 +70,7 @@
                   {{ course.requiresPoints ? `${course.pointsCost} 积分` : '已免费开放' }}
                 </div>
                 <div class="unlock-sub">
-                  {{ course.canLearn ? '当前账号已具备学习权限' : '购买后可解锁本课程全部视频' }}
+                  {{ course.canLearn ? '当前账号已具备学习权限。' : '购买后可解锁本课程全部视频。' }}
                 </div>
               </div>
 
@@ -101,9 +101,7 @@
                 </div>
                 <div class="stat-row">
                   <span class="stat-label">购买状态</span>
-                  <span class="stat-val">
-                    {{ course.requiresPoints ? (course.purchased ? '已购买' : '未购买') : '免费开放' }}
-                  </span>
+                  <span class="stat-val">{{ course.requiresPoints ? (course.purchased ? '已购买' : '未购买') : '免费开放' }}</span>
                 </div>
               </div>
             </a-card>
@@ -139,15 +137,18 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import { getCourseDetail, purchaseCourse } from '@/api/index.js'
+import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const course = ref(null)
 const chapters = ref([])
 const loading = ref(true)
 const actionLoading = ref(false)
 const openChapters = ref([])
 
+// 找到课程里的第一节视频，作为开始学习的默认入口。
 const firstVideoId = computed(() => {
   for (const chapter of chapters.value) {
     if (chapter.videos?.length > 0) {
@@ -157,24 +158,28 @@ const firstVideoId = computed(() => {
   return null
 })
 
+// 用学习进度判断当前用户是开始学习还是继续学习。
 const hasStarted = computed(() => {
   const progress = course.value?.progress
   return Boolean(progress && progress.completedCount > 0)
 })
 
+// 主按钮文案根据购买状态和学习进度动态变化。
 const primaryActionText = computed(() => {
-  if (!course.value) return '处理中'
+  if (!course.value) return '处理中...'
   if (course.value.requiresPoints && !course.value.canLearn) {
     return `使用 ${course.value.pointsCost} 积分购买并开始学习`
   }
   return hasStarted.value ? '继续学习' : '开始学习'
 })
 
+// 跳到具体视频播放页。
 function goToVideo(videoId) {
   if (!course.value?.id || !videoId) return
   router.push(`/course/${course.value.id}/video/${videoId}`)
 }
 
+// 目录点击时先判断课程是否已解锁。
 function handleVideoClick(videoId) {
   if (course.value?.requiresPoints && !course.value?.canLearn) {
     message.warning('请先购买该课程')
@@ -196,6 +201,7 @@ function handleCoverError(event) {
   }
 }
 
+// 加载课程详情和章节目录。
 async function loadCourse() {
   loading.value = true
   try {
@@ -213,6 +219,7 @@ async function loadCourse() {
   }
 }
 
+// 主操作：未购买时先走积分购买，成功后再跳第一节视频。
 async function handlePrimaryAction() {
   if (!firstVideoId.value) return
 
@@ -220,6 +227,9 @@ async function handlePrimaryAction() {
   try {
     if (course.value?.requiresPoints && !course.value?.canLearn) {
       const result = await purchaseCourse(course.value.id)
+      if (userStore.isLoggedIn) {
+        await userStore.fetchUserInfo().catch(() => {})
+      }
       message.success(`购买成功，已扣除 ${result?.pointsCost || course.value.pointsCost} 积分`)
       await loadCourse()
     }

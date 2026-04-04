@@ -75,6 +75,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { message } from 'ant-design-vue'
 import { getVideoInfo, getCourseDetail, updateVideoProgress } from '@/api/index.js'
 import {
   LeftOutlined,

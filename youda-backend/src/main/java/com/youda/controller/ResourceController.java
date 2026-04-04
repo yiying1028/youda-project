@@ -37,6 +37,9 @@ public class ResourceController {
     @Autowired
     private FileUtils fileUtils;
 
+    /**
+     * 前台资料列表查询，支持按学科、年级、关键词筛选。
+     */
     @GetMapping("/list")
     public Result<IPage<ResourceListVO>> getResourceList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -47,29 +50,53 @@ public class ResourceController {
         return Result.success(resourceService.getResourceList(current, size, subjectId, gradeId, keyword));
     }
 
+    /**
+     * 前台资料详情查询，用于展示购买状态和下载权限。
+     */
     @GetMapping("/{resourceId}")
     public Result<ResourceDetailVO> getResourceDetail(@PathVariable Long resourceId) {
         return Result.success(resourceService.getResourceDetail(resourceId));
     }
 
+    /**
+     * 资料购买接口，登录用户使用积分兑换下载权限。
+     */
     @PostMapping("/{resourceId}/purchase")
     public Result<Map<String, Object>> purchaseResource(@PathVariable Long resourceId) {
-        return Result.success("购买成功", resourceService.purchaseResource(resourceId));
+        return Result.success("Purchase successful", resourceService.purchaseResource(resourceId));
     }
 
+    /**
+     * 资料上传接口。
+     * 管理端会把是否付费和购买积分一起传进来。
+     */
     @PostMapping("/upload")
     public Result<Map<String, Long>> uploadResource(
             @RequestParam("file") MultipartFile file,
             @RequestParam String name,
             @RequestParam(required = false) String description,
             @RequestParam Long subjectId,
-            @RequestParam Long gradeId) {
-        Long resourceId = resourceService.uploadResource(file, name, description, subjectId, gradeId);
+            @RequestParam Long gradeId,
+            @RequestParam(defaultValue = "0") Integer requiresPoints,
+            @RequestParam(defaultValue = "0") Integer pointsCost) {
+        Long resourceId = resourceService.uploadResource(
+                file,
+                name,
+                description,
+                subjectId,
+                gradeId,
+                requiresPoints,
+                pointsCost
+        );
         Map<String, Long> data = new HashMap<>();
         data.put("resourceId", resourceId);
-        return Result.success("上传成功", data);
+        return Result.success("Upload successful", data);
     }
 
+    /**
+     * 资料下载接口。
+     * 真正的下载权限校验在 service 层统一处理。
+     */
     @GetMapping("/{resourceId}/download")
     public ResponseEntity<org.springframework.core.io.Resource> downloadResource(@PathVariable Long resourceId) {
         Resource resource = resourceService.downloadResource(resourceId);
@@ -89,13 +116,16 @@ public class ResourceController {
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
                     .body(urlResource);
         } catch (Exception e) {
-            throw new RuntimeException("文件下载失败");
+            throw new RuntimeException("File download failed");
         }
     }
 
+    /**
+     * 管理员删除资料。
+     */
     @DeleteMapping("/{resourceId}")
     public Result<?> deleteResource(@PathVariable Long resourceId) {
         resourceService.deleteResource(resourceId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 }

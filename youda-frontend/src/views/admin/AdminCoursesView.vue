@@ -16,7 +16,6 @@
       </div>
     </div>
 
-    <!-- 课程表格 -->
     <a-card :bordered="false" class="table-card">
       <a-table
         :columns="columns"
@@ -28,14 +27,13 @@
         :expand-row-by-click="false"
       >
         <template #bodyCell="{ column, record }">
-          <!-- 课程名称 -->
           <template v-if="column.key === 'name'">
             <div class="course-cell">
               <img
-                v-if="record.cover"
-                :src="record.cover"
+                v-if="record.coverImage"
+                :src="record.coverImage"
                 class="course-mini-cover"
-                alt="封面"
+                alt="课程封面"
               />
               <div class="course-mini-cover placeholder-cover" v-else>
                 <play-circle-outlined />
@@ -44,38 +42,31 @@
             </div>
           </template>
 
-          <!-- 科目+年级 -->
           <template v-else-if="column.key === 'tags'">
             <a-tag color="blue" size="small">{{ record.subjectName }}</a-tag>
             <a-tag size="small">{{ record.gradeName }}</a-tag>
           </template>
 
-          <!-- 课时数 -->
+          <template v-else-if="column.key === 'pricing'">
+            <a-tag :color="isPaidCourse(record) ? 'orange' : 'green'">
+              {{ isPaidCourse(record) ? `${record.pointsCost} 积分` : '免费' }}
+            </a-tag>
+          </template>
+
           <template v-else-if="column.key === 'videoCount'">
             {{ record.videoCount || 0 }} 节
           </template>
 
-          <!-- 操作列 -->
           <template v-else-if="column.key === 'action'">
-            <!-- 管理章节视频 -->
-            <a-button
-              type="link"
-              size="small"
-              @click="openChapterModal(record)"
-            >
+            <a-button type="link" size="small" @click="openChapterModal(record)">
               章节
             </a-button>
             <a-divider type="vertical" />
-            <!-- 编辑课程基本信息 -->
             <a-button type="link" size="small" @click="openEditModal(record)">
               编辑
             </a-button>
             <a-divider type="vertical" />
-            <!-- 删除课程 -->
-            <a-popconfirm
-              title="确定删除该课程及其所有章节视频？"
-              @confirm="handleDelete(record.id)"
-            >
+            <a-popconfirm title="确定删除该课程及其所有章节视频？" @confirm="handleDelete(record.id)">
               <a-button type="link" danger size="small">删除</a-button>
             </a-popconfirm>
           </template>
@@ -83,7 +74,6 @@
       </a-table>
     </a-card>
 
-    <!-- 新增/编辑课程弹窗 -->
     <a-modal
       v-model:open="showCourseModal"
       :title="editingCourse ? '编辑课程' : '新增课程'"
@@ -136,8 +126,25 @@
           <a-input v-model:value="courseForm.teacherName" placeholder="请输入主讲老师姓名" />
         </a-form-item>
 
-        <a-form-item label="课程封面URL" name="cover">
-          <a-input v-model:value="courseForm.cover" placeholder="请输入封面图片URL（可选）" />
+        <a-form-item label="课程封面 URL" name="coverImage">
+          <a-input v-model:value="courseForm.coverImage" placeholder="请输入封面图片 URL（可选）" />
+        </a-form-item>
+
+        <a-form-item label="课程类型">
+          <a-radio-group v-model:value="courseForm.requiresPoints">
+            <a-radio :value="0">免费</a-radio>
+            <a-radio :value="1">付费</a-radio>
+          </a-radio-group>
+        </a-form-item>
+
+        <a-form-item v-if="courseForm.requiresPoints === 1" label="购买积分" name="pointsCost">
+          <a-input-number
+            v-model:value="courseForm.pointsCost"
+            :min="1"
+            :precision="0"
+            style="width: 100%"
+            placeholder="请输入课程解锁所需积分"
+          />
         </a-form-item>
 
         <div style="display: flex; justify-content: flex-end; gap: 8px">
@@ -149,7 +156,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 章节管理弹窗 -->
     <a-modal
       v-model:open="showChapterModal"
       :title="'章节管理 - ' + (selectedCourse?.name || '')"
@@ -158,7 +164,6 @@
       :destroy-on-close="true"
     >
       <div class="chapter-manager">
-        <!-- 新增章节 -->
         <div class="add-chapter">
           <a-input
             v-model:value="newChapterTitle"
@@ -170,7 +175,6 @@
           </a-button>
         </div>
 
-        <!-- 章节列表 -->
         <div class="chapter-list">
           <div
             v-for="chapter in selectedCourse?.chapters"
@@ -181,7 +185,6 @@
               <folder-outlined />
               <span class="chapter-name">{{ chapter.title }}</span>
               <span class="chapter-video-count">{{ chapter.videos?.length || 0 }} 节</span>
-              <!-- 上传视频按钮 -->
               <a-upload
                 :before-upload="(file) => handleVideoUpload(chapter.id, file)"
                 accept="video/*"
@@ -193,7 +196,6 @@
               </a-upload>
             </div>
 
-            <!-- 视频列表 -->
             <div
               v-for="video in chapter.videos"
               :key="video.id"
@@ -229,7 +231,6 @@ import {
   getGradeList
 } from '@/api/index.js'
 import { message } from 'ant-design-vue'
-import dayjs from 'dayjs'
 import {
   PlusOutlined,
   PlayCircleOutlined,
@@ -251,8 +252,6 @@ const pagination = reactive({
 
 const subjects = ref([])
 const grades = ref([])
-
-// 课程编辑弹窗
 const showCourseModal = ref(false)
 const editingCourse = ref(null)
 const saving = ref(false)
@@ -263,29 +262,47 @@ const courseForm = reactive({
   subjectId: null,
   gradeId: null,
   teacherName: '',
-  cover: ''
+  coverImage: '',
+  requiresPoints: 0,
+  pointsCost: 0
 })
 
-// 章节管理弹窗
 const showChapterModal = ref(false)
 const selectedCourse = ref(null)
 const newChapterTitle = ref('')
 const chapterAdding = ref(false)
 
+// 只有付费课程才强制要求填写积分价格。
 const courseRules = {
   name: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
   subjectId: [{ required: true, message: '请选择科目', trigger: 'change' }],
-  gradeId: [{ required: true, message: '请选择年级', trigger: 'change' }]
+  gradeId: [{ required: true, message: '请选择年级', trigger: 'change' }],
+  pointsCost: [{
+    validator: (_, value) => {
+      if (courseForm.requiresPoints !== 1 || Number(value) > 0) {
+        return Promise.resolve()
+      }
+      return Promise.reject(new Error('请输入大于 0 的积分数'))
+    },
+    trigger: 'change'
+  }]
 }
 
 const columns = [
-  { title: '课程', key: 'name', width: '35%' },
+  { title: '课程', key: 'name', width: '28%' },
   { title: '分类', key: 'tags', width: 160 },
+  { title: '费用', key: 'pricing', width: 120 },
   { title: '主讲', dataIndex: 'teacherName', width: 100 },
   { title: '课时', key: 'videoCount', width: 80 },
   { title: '操作', key: 'action', width: 160 }
 ]
 
+// 统一判断课程是否为付费课程，列表渲染和编辑回填都靠它。
+function isPaidCourse(record) {
+  return record?.requiresPoints === 1 && Number(record?.pointsCost) > 0
+}
+
+// 加载课程列表数据。
 async function loadCourses() {
   loading.value = true
   try {
@@ -301,21 +318,23 @@ async function loadCourses() {
   }
 }
 
-/**
- * 打开新增课程弹窗
- */
+// 打开新增弹窗时重置字段，避免沿用上一次编辑状态。
 function openAddModal() {
   editingCourse.value = null
   Object.assign(courseForm, {
-    name: '', description: '', subjectId: null,
-    gradeId: null, teacherName: '', cover: ''
+    name: '',
+    description: '',
+    subjectId: null,
+    gradeId: null,
+    teacherName: '',
+    coverImage: '',
+    requiresPoints: 0,
+    pointsCost: 0
   })
   showCourseModal.value = true
 }
 
-/**
- * 打开编辑课程弹窗
- */
+// 打开编辑弹窗时回填基础信息和付费配置。
 function openEditModal(record) {
   editingCourse.value = record
   Object.assign(courseForm, {
@@ -324,22 +343,32 @@ function openEditModal(record) {
     subjectId: record.subjectId,
     gradeId: record.gradeId,
     teacherName: record.teacherName || '',
-    cover: record.cover || ''
+    coverImage: record.coverImage || '',
+    requiresPoints: isPaidCourse(record) ? 1 : 0,
+    pointsCost: isPaidCourse(record) ? Number(record.pointsCost) : 0
   })
   showCourseModal.value = true
 }
 
-/**
- * 保存课程（新增或编辑）
- */
+// 保存课程新增/编辑，提交前再次兜底校验积分价格。
 async function handleSaveCourse() {
+  if (courseForm.requiresPoints === 1 && Number(courseForm.pointsCost) <= 0) {
+    message.warning('付费课程请设置大于 0 的积分价格')
+    return
+  }
+
+  const payload = {
+    ...courseForm,
+    pointsCost: courseForm.requiresPoints === 1 ? Number(courseForm.pointsCost) : 0
+  }
+
   saving.value = true
   try {
     if (editingCourse.value) {
-      await adminUpdateCourse(editingCourse.value.id, courseForm)
+      await adminUpdateCourse(editingCourse.value.id, payload)
       message.success('课程信息已更新')
     } else {
-      await adminAddCourse(courseForm)
+      await adminAddCourse(payload)
       message.success('课程创建成功')
     }
     showCourseModal.value = false
@@ -349,9 +378,7 @@ async function handleSaveCourse() {
   }
 }
 
-/**
- * 删除课程
- */
+// 删除课程后刷新列表。
 async function handleDelete(id) {
   try {
     await adminDeleteCourse(id)
@@ -360,17 +387,13 @@ async function handleDelete(id) {
   } catch {}
 }
 
-/**
- * 打开章节管理弹窗
- */
+// 打开章节管理弹窗。
 function openChapterModal(record) {
   selectedCourse.value = record
   showChapterModal.value = true
 }
 
-/**
- * 添加章节
- */
+// 给当前课程新增章节。
 async function handleAddChapter() {
   if (!newChapterTitle.value.trim()) {
     message.warning('请输入章节标题')
@@ -381,16 +404,13 @@ async function handleAddChapter() {
     await adminAddChapter(selectedCourse.value.id, { title: newChapterTitle.value })
     message.success('章节添加成功')
     newChapterTitle.value = ''
-    // 重新加载课程详情以刷新章节列表
     loadCourses()
   } finally {
     chapterAdding.value = false
   }
 }
 
-/**
- * 上传视频（关联到章节）
- */
+// 把上传的视频挂到指定章节下。
 async function handleVideoUpload(chapterId, file) {
   const formData = new FormData()
   formData.append('file', file)
@@ -403,9 +423,6 @@ async function handleVideoUpload(chapterId, file) {
   return false
 }
 
-/**
- * 格式化视频时长
- */
 function formatDuration(seconds) {
   if (!seconds) return ''
   const m = Math.floor(seconds / 60)
@@ -413,16 +430,19 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+// 搜索时回到第一页并重新拉取课程列表。
 function handleSearch() {
   pagination.current = 1
   loadCourses()
 }
 
+// 表格翻页时重新加载课程列表。
 function handleTableChange(pag) {
   pagination.current = pag.current
   loadCourses()
 }
 
+// 加载课程表单使用的科目、年级选项。
 async function loadOptions() {
   const [subData, gradeData] = await Promise.allSettled([getSubjectList(), getGradeList()])
   if (subData.status === 'fulfilled') subjects.value = subData.value || []
@@ -461,7 +481,6 @@ onMounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-/* 课程名称单元格 */
 .course-cell {
   display: flex;
   align-items: center;
@@ -485,7 +504,6 @@ onMounted(() => {
   font-size: 16px;
 }
 
-/* 章节管理弹窗内容 */
 .chapter-manager {
   min-height: 300px;
 }

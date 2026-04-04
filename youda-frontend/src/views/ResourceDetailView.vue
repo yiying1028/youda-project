@@ -16,13 +16,13 @@
                   <a-tag color="green">{{ resource.fileType?.toUpperCase() }}</a-tag>
                 </div>
                 <h1 class="detail-title">{{ resource.name }}</h1>
-                <p class="detail-desc">{{ resource.description || '该资料暂无描述信息。' }}</p>
+                <p class="detail-desc">{{ resource.description || '该资料暂时没有补充说明。' }}</p>
               </div>
               <div class="price-panel" :class="{ paid: resource.requiresPoints }">
                 <div class="price-label">获取方式</div>
                 <div class="price-value">{{ resource.requiresPoints ? `${resource.pointsCost} 积分` : '免费' }}</div>
                 <div class="price-sub">
-                  {{ resource.canDownload ? '已解锁，可直接下载' : '购买后可下载原始资料文件' }}
+                  {{ resource.canDownload ? '当前账号已解锁，可直接下载。' : '购买后可下载原始资料文件。' }}
                 </div>
               </div>
             </div>
@@ -81,19 +81,23 @@ import dayjs from 'dayjs'
 import { message } from 'ant-design-vue'
 import { DownloadOutlined, LeftOutlined } from '@ant-design/icons-vue'
 import { downloadResource, getResourceDetail, purchaseResource } from '@/api/index.js'
+import { useUserStore } from '@/stores/user.js'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const resource = ref(null)
 const loading = ref(true)
 const actionLoading = ref(false)
 
+// 主按钮文案跟着已购买/未购买动态切换。
 const actionText = computed(() => {
-  if (!resource.value) return '处理中'
+  if (!resource.value) return '处理中...'
   if (resource.value.canDownload) return '立即下载'
   return `使用 ${resource.value.pointsCost} 积分购买并下载`
 })
 
+// 路由参数兜底转换成合法的资料 ID。
 function resolveResourceId(value) {
   const resourceId = Number(value)
   return Number.isInteger(resourceId) && resourceId > 0 ? resourceId : null
@@ -110,6 +114,7 @@ function formatDate(value) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm') : '--'
 }
 
+// 加载资料详情，顺便拿到当前账号的购买状态。
 async function loadResource() {
   loading.value = true
   try {
@@ -126,6 +131,7 @@ async function loadResource() {
   }
 }
 
+// 实际下载动作单独拆出来，便于购买成功后自动下载复用。
 async function downloadCurrentResource() {
   if (!resource.value?.id) return false
   try {
@@ -138,6 +144,7 @@ async function downloadCurrentResource() {
   }
 }
 
+// 主操作：已解锁时直接下载，未解锁时先购买再自动下载。
 async function handlePrimaryAction() {
   if (!resource.value?.id) return
 
@@ -149,6 +156,9 @@ async function handlePrimaryAction() {
     }
 
     const result = await purchaseResource(resource.value.id)
+    if (userStore.isLoggedIn) {
+      await userStore.fetchUserInfo().catch(() => {})
+    }
     message.success(`购买成功，已扣除 ${result?.pointsCost || resource.value.pointsCost} 积分`)
     await loadResource()
     await downloadCurrentResource()

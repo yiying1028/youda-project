@@ -5,23 +5,45 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.youda.common.BusinessException;
 import com.youda.common.Result;
-import com.youda.entity.*;
-import com.youda.mapper.*;
+import com.youda.entity.Announcement;
+import com.youda.entity.Category;
+import com.youda.entity.Comment;
+import com.youda.entity.Course;
+import com.youda.entity.CourseChapter;
+import com.youda.entity.CourseVideo;
+import com.youda.entity.Post;
+import com.youda.entity.Resource;
+import com.youda.entity.User;
+import com.youda.mapper.AnnouncementMapper;
+import com.youda.mapper.CategoryMapper;
+import com.youda.mapper.CommentMapper;
+import com.youda.mapper.CourseChapterMapper;
+import com.youda.mapper.CourseMapper;
+import com.youda.mapper.CourseVideoMapper;
+import com.youda.mapper.GradeMapper;
+import com.youda.mapper.PostMapper;
+import com.youda.mapper.ResourceMapper;
+import com.youda.mapper.SubjectMapper;
+import com.youda.mapper.UserMapper;
 import com.youda.utils.FileUtils;
 import com.youda.utils.UserContext;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-/**
- * 管理后台Controller
- * 仅管理员（role=1）可访问
- * 涵盖：用户管理、帖子管理、资料管理、课程管理、公告管理、数据统计
- */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -63,21 +85,16 @@ public class AdminController {
     private FileUtils fileUtils;
 
     /**
-     * 公共：校验当前用户是否为管理员（role=1）
+     * 后台接口统一校验管理员身份。
      */
     private void checkAdmin() {
         Long userId = UserContext.getCurrentUserId();
         User user = userMapper.selectById(userId);
         if (user == null || user.getRole() != 1) {
-            throw new BusinessException(403, "无权限访问，仅管理员可操作");
+            throw new BusinessException(403, "Admin only");
         }
     }
 
-    // ==================== 用户管理 ====================
-
-    /**
-     * 获取用户列表（支持关键词搜索用户名/昵称）
-     */
     @GetMapping("/user/list")
     public Result<IPage<User>> getUserList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -94,27 +111,20 @@ public class AdminController {
         return Result.success(userMapper.selectPage(page, wrapper));
     }
 
-    /**
-     * 禁用/启用用户账号
-     * @param status 0=禁用 1=启用
-     */
     @PutMapping("/user/{userId}/status")
     public Result<?> updateUserStatus(@PathVariable Long userId, @RequestParam Integer status) {
         checkAdmin();
 
         User user = userMapper.selectById(userId);
-        if (user == null) throw new BusinessException("用户不存在");
+        if (user == null) {
+            throw new BusinessException("User not found");
+        }
 
         user.setStatus(status);
         userMapper.updateById(user);
-        return Result.success(status == 1 ? "启用成功" : "禁用成功", null);
+        return Result.success(status == 1 ? "User enabled" : "User disabled", null);
     }
 
-    // ==================== 帖子管理 ====================
-
-    /**
-     * 获取帖子列表（管理后台，含软删除数据除外）
-     */
     @GetMapping("/post/list")
     public Result<IPage<Post>> getPostList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -131,42 +141,34 @@ public class AdminController {
         return Result.success(postMapper.selectPage(page, wrapper));
     }
 
-    /**
-     * 删除帖子（管理员强制删除）
-     */
     @DeleteMapping("/post/{postId}")
     public Result<?> deletePost(@PathVariable Long postId) {
         checkAdmin();
 
         Post post = postMapper.selectById(postId);
-        if (post == null) throw new BusinessException("帖子不存在");
+        if (post == null) {
+            throw new BusinessException("Post not found");
+        }
         postMapper.deleteById(postId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    /**
-     * 设置/取消帖子置顶
-     * @param isTop 1=置顶 0=取消置顶
-     */
     @PutMapping("/post/{postId}/top")
     public Result<?> setPostTop(@PathVariable Long postId, @RequestParam Integer isTop) {
         checkAdmin();
 
         Post post = postMapper.selectById(postId);
-        if (post == null) throw new BusinessException("帖子不存在");
+        if (post == null) {
+            throw new BusinessException("Post not found");
+        }
 
         Post updatePost = new Post();
         updatePost.setId(postId);
         updatePost.setIsTop(isTop);
         postMapper.updateById(updatePost);
-        return Result.success(isTop == 1 ? "置顶成功" : "取消置顶成功", null);
+        return Result.success(isTop == 1 ? "Top set" : "Top removed", null);
     }
 
-    // ==================== 资料管理 ====================
-
-    /**
-     * 获取资料列表（管理后台）
-     */
     @GetMapping("/resource/list")
     public Result<IPage<Resource>> getResourceList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -183,24 +185,18 @@ public class AdminController {
         return Result.success(resourceMapper.selectPage(page, wrapper));
     }
 
-    /**
-     * 删除资料（管理员）
-     */
     @DeleteMapping("/resource/{resourceId}")
     public Result<?> deleteResource(@PathVariable Long resourceId) {
         checkAdmin();
 
         Resource resource = resourceMapper.selectById(resourceId);
-        if (resource == null) throw new BusinessException("资料不存在");
+        if (resource == null) {
+            throw new BusinessException("Resource not found");
+        }
         resourceMapper.deleteById(resourceId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 课程管理 ====================
-
-    /**
-     * 获取课程列表（管理后台）
-     */
     @GetMapping("/course/list")
     public Result<IPage<Course>> getCourseList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -218,114 +214,103 @@ public class AdminController {
     }
 
     /**
-     * 新增课程
+     * 后台课程新增，保存前统一清洗付费配置。
      */
     @PostMapping("/course")
     public Result<Map<String, Long>> addCourse(@RequestBody Course course) {
         checkAdmin();
 
+        normalizeCoursePricing(course);
         course.setStudentCount(0);
         course.setChapterCount(0);
         courseMapper.insert(course);
 
         Map<String, Long> data = new HashMap<>();
         data.put("courseId", course.getId());
-        return Result.success("添加成功", data);
+        return Result.success("Create successful", data);
     }
 
     /**
-     * 编辑课程基本信息
+     * 后台课程编辑，避免把非法价格组合直接写进数据库。
      */
     @PutMapping("/course/{courseId}")
     public Result<?> updateCourse(@PathVariable Long courseId, @RequestBody Course course) {
         checkAdmin();
 
         Course existing = courseMapper.selectById(courseId);
-        if (existing == null) throw new BusinessException("课程不存在");
+        if (existing == null) {
+            throw new BusinessException("Course not found");
+        }
 
+        normalizeCoursePricing(course);
         course.setId(courseId);
         courseMapper.updateById(course);
-        return Result.success("修改成功", null);
+        return Result.success("Update successful", null);
     }
 
-    /**
-     * 删除课程（同时删除章节和视频）
-     */
     @DeleteMapping("/course/{courseId}")
     public Result<?> deleteCourse(@PathVariable Long courseId) {
         checkAdmin();
 
         Course course = courseMapper.selectById(courseId);
-        if (course == null) throw new BusinessException("课程不存在");
+        if (course == null) {
+            throw new BusinessException("Course not found");
+        }
 
-        // 查出该课程下所有章节，再删除章节下视频
         LambdaQueryWrapper<CourseChapter> chapterWrapper = new LambdaQueryWrapper<CourseChapter>()
                 .eq(CourseChapter::getCourseId, courseId);
-        java.util.List<CourseChapter> chapters = chapterMapper.selectList(chapterWrapper);
+        List<CourseChapter> chapters = chapterMapper.selectList(chapterWrapper);
         for (CourseChapter chapter : chapters) {
             videoMapper.delete(new LambdaQueryWrapper<CourseVideo>()
                     .eq(CourseVideo::getChapterId, chapter.getId()));
         }
         chapterMapper.delete(chapterWrapper);
         courseMapper.deleteById(courseId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 章节管理 ====================
-
-    /**
-     * 为课程新增章节
-     */
     @PostMapping("/course/{courseId}/chapter")
     public Result<Map<String, Long>> addChapter(@PathVariable Long courseId, @RequestBody CourseChapter chapter) {
         checkAdmin();
 
         Course course = courseMapper.selectById(courseId);
-        if (course == null) throw new BusinessException("课程不存在");
+        if (course == null) {
+            throw new BusinessException("Course not found");
+        }
 
         chapter.setCourseId(courseId);
         chapterMapper.insert(chapter);
 
-        // 更新课程章节数统计
-        course.setChapterCount(course.getChapterCount() + 1);
+        course.setChapterCount((course.getChapterCount() == null ? 0 : course.getChapterCount()) + 1);
         courseMapper.updateById(course);
 
         Map<String, Long> data = new HashMap<>();
         data.put("chapterId", chapter.getId());
-        return Result.success("添加成功", data);
+        return Result.success("Create successful", data);
     }
 
-    /**
-     * 删除章节（同时删除章节下所有视频）
-     */
     @DeleteMapping("/chapter/{chapterId}")
     public Result<?> deleteChapter(@PathVariable Long chapterId) {
         checkAdmin();
 
         CourseChapter chapter = chapterMapper.selectById(chapterId);
-        if (chapter == null) throw new BusinessException("章节不存在");
+        if (chapter == null) {
+            throw new BusinessException("Chapter not found");
+        }
 
-        // 级联删除视频
         videoMapper.delete(new LambdaQueryWrapper<CourseVideo>()
                 .eq(CourseVideo::getChapterId, chapterId));
         chapterMapper.deleteById(chapterId);
 
-        // 更新课程章节数
         Course course = courseMapper.selectById(chapter.getCourseId());
         if (course != null) {
-            course.setChapterCount(Math.max(0, course.getChapterCount() - 1));
+            course.setChapterCount(Math.max(0, (course.getChapterCount() == null ? 0 : course.getChapterCount()) - 1));
             courseMapper.updateById(course);
         }
 
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 视频管理 ====================
-
-    /**
-     * 为章节上传视频
-     * 接收视频文件和标题、排序号
-     */
     @PostMapping("/chapter/{chapterId}/video")
     public Result<Map<String, Long>> uploadVideo(
             @PathVariable Long chapterId,
@@ -335,9 +320,10 @@ public class AdminController {
         checkAdmin();
 
         CourseChapter chapter = chapterMapper.selectById(chapterId);
-        if (chapter == null) throw new BusinessException("章节不存在");
+        if (chapter == null) {
+            throw new BusinessException("Chapter not found");
+        }
 
-        // 保存视频文件
         String videoUrl = fileUtils.uploadFile(file, "video");
 
         CourseVideo video = new CourseVideo();
@@ -346,36 +332,28 @@ public class AdminController {
         video.setTitle(title);
         video.setVideoUrl(videoUrl);
         video.setSort(sort);
-        // 时长暂时为0，实际项目可通过ffprobe解析
         video.setDuration(0);
         videoMapper.insert(video);
 
         Map<String, Long> data = new HashMap<>();
         data.put("videoId", video.getId());
-        return Result.success("上传成功", data);
+        return Result.success("Upload successful", data);
     }
 
-    /**
-     * 删除视频
-     */
     @DeleteMapping("/video/{videoId}")
     public Result<?> deleteVideo(@PathVariable Long videoId) {
         checkAdmin();
 
         CourseVideo video = videoMapper.selectById(videoId);
-        if (video == null) throw new BusinessException("视频不存在");
+        if (video == null) {
+            throw new BusinessException("Video not found");
+        }
 
-        // 删除文件
         fileUtils.deleteFile(video.getVideoUrl());
         videoMapper.deleteById(videoId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 分类管理 ====================
-
-    /**
-     * 新增帖子分类
-     */
     @PostMapping("/category")
     public Result<Map<String, Long>> addCategory(@RequestBody Category category) {
         checkAdmin();
@@ -384,37 +362,28 @@ public class AdminController {
 
         Map<String, Long> data = new HashMap<>();
         data.put("categoryId", category.getId());
-        return Result.success("添加成功", data);
+        return Result.success("Create successful", data);
     }
 
-    /**
-     * 修改帖子分类
-     */
     @PutMapping("/category/{categoryId}")
     public Result<?> updateCategory(@PathVariable Long categoryId, @RequestBody Category category) {
         checkAdmin();
         Category existing = categoryMapper.selectById(categoryId);
-        if (existing == null) throw new BusinessException("分类不存在");
+        if (existing == null) {
+            throw new BusinessException("Category not found");
+        }
         category.setId(categoryId);
         categoryMapper.updateById(category);
-        return Result.success("修改成功", null);
+        return Result.success("Update successful", null);
     }
 
-    /**
-     * 删除帖子分类
-     */
     @DeleteMapping("/category/{categoryId}")
     public Result<?> deleteCategory(@PathVariable Long categoryId) {
         checkAdmin();
         categoryMapper.deleteById(categoryId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 公告管理 ====================
-
-    /**
-     * 获取公告列表（管理后台，分页）
-     */
     @GetMapping("/announcement/list")
     public Result<IPage<Announcement>> getAnnouncementList(
             @RequestParam(defaultValue = "1") Integer current,
@@ -427,9 +396,6 @@ public class AdminController {
         return Result.success(announcementMapper.selectPage(page, wrapper));
     }
 
-    /**
-     * 发布公告
-     */
     @PostMapping("/announcement")
     public Result<Map<String, Long>> addAnnouncement(@RequestBody Announcement announcement) {
         checkAdmin();
@@ -438,38 +404,28 @@ public class AdminController {
 
         Map<String, Long> data = new HashMap<>();
         data.put("announcementId", announcement.getId());
-        return Result.success("发布成功", data);
+        return Result.success("Publish successful", data);
     }
 
-    /**
-     * 修改公告内容
-     */
     @PutMapping("/announcement/{announcementId}")
     public Result<?> updateAnnouncement(@PathVariable Long announcementId, @RequestBody Announcement announcement) {
         checkAdmin();
         Announcement existing = announcementMapper.selectById(announcementId);
-        if (existing == null) throw new BusinessException("公告不存在");
+        if (existing == null) {
+            throw new BusinessException("Announcement not found");
+        }
         announcement.setId(announcementId);
         announcementMapper.updateById(announcement);
-        return Result.success("修改成功", null);
+        return Result.success("Update successful", null);
     }
 
-    /**
-     * 删除公告
-     */
     @DeleteMapping("/announcement/{announcementId}")
     public Result<?> deleteAnnouncement(@PathVariable Long announcementId) {
         checkAdmin();
         announcementMapper.deleteById(announcementId);
-        return Result.success("删除成功", null);
+        return Result.success("Delete successful", null);
     }
 
-    // ==================== 数据统计 ====================
-
-    /**
-     * 获取平台整体统计数据
-     * 包含用户总数、帖子总数、资料总数、课程总数
-     */
     @GetMapping("/statistics")
     public Result<Map<String, Object>> getStatistics() {
         checkAdmin();
@@ -481,5 +437,19 @@ public class AdminController {
         stats.put("courseCount", courseMapper.selectCount(null));
         stats.put("commentCount", commentMapper.selectCount(null));
         return Result.success(stats);
+    }
+
+    /**
+     * 课程价格归一化。
+     * 免费课程价格强制为 0，只有开关打开且价格大于 0 才算付费。
+     */
+    private void normalizeCoursePricing(Course course) {
+        if (course == null) {
+            throw new BusinessException(400, "Course payload cannot be null");
+        }
+        int normalizedCost = course.getPointsCost() == null ? 0 : Math.max(course.getPointsCost(), 0);
+        boolean paidCourse = course.getRequiresPoints() != null && course.getRequiresPoints() == 1 && normalizedCost > 0;
+        course.setRequiresPoints(paidCourse ? 1 : 0);
+        course.setPointsCost(paidCourse ? normalizedCost : 0);
     }
 }

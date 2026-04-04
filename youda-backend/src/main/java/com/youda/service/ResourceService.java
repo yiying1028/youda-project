@@ -17,7 +17,8 @@ public interface ResourceService extends IService<Resource> {
 
     Map<String, Object> purchaseResource(Long resourceId);
 
-    Long uploadResource(MultipartFile file, String name, String description, Long subjectId, Long gradeId);
+    Long uploadResource(MultipartFile file, String name, String description, Long subjectId, Long gradeId,
+                        Integer requiresPoints, Integer pointsCost);
 
     Resource downloadResource(Long resourceId);
 
