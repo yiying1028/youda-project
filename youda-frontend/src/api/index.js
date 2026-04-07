@@ -1,4 +1,4 @@
-import axios from 'axios'
+﻿import axios from 'axios'
 import request from '@/utils/request.js'
 
 const normalizeChatId = (value, seen = new WeakSet()) => {
@@ -286,6 +286,8 @@ export const setPostTop = (id, isTop) =>
 export const getAdminResourceList = (params) => request.get('/admin/resource/list', { params })
 export const adminDeleteResource = (id) => request.delete(`/admin/resource/${id}`)
 export const getAdminCourseList = (params) => request.get('/admin/course/list', { params })
+export const getAdminCourseDetail = (id) => request.get(`/admin/course/${id}`)
+export const adminUploadCourseCover = (formData) => request.post('/admin/course/cover', formData)
 export const adminAddCourse = (data) => request.post('/admin/course', data)
 export const adminUpdateCourse = (id, data) => request.put(`/admin/course/${id}`, data)
 export const adminDeleteCourse = (id) => request.delete(`/admin/course/${id}`)
@@ -295,3 +297,4 @@ export const getAdminAnnouncementList = (params) => request.get('/admin/announce
 export const adminAddAnnouncement = (data) => request.post('/admin/announcement', data)
 export const adminUpdateAnnouncement = (id, data) => request.put(`/admin/announcement/${id}`, data)
 export const adminDeleteAnnouncement = (id) => request.delete(`/admin/announcement/${id}`)
+

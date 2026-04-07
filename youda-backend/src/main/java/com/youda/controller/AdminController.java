@@ -25,8 +25,10 @@ import com.youda.mapper.PostMapper;
 import com.youda.mapper.ResourceMapper;
 import com.youda.mapper.SubjectMapper;
 import com.youda.mapper.UserMapper;
+import com.youda.service.CourseService;
 import com.youda.utils.FileUtils;
 import com.youda.utils.UserContext;
+import com.youda.vo.CourseDetailVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -84,8 +86,11 @@ public class AdminController {
     @Autowired
     private FileUtils fileUtils;
 
+    @Autowired
+    private CourseService courseService;
+
     /**
-     * 后台接口统一校验管理员身份。
+     * 鍚庡彴鎺ュ彛缁熶竴鏍￠獙绠＄悊鍛樿韩浠姐€?
      */
     private void checkAdmin() {
         Long userId = UserContext.getCurrentUserId();
@@ -213,8 +218,24 @@ public class AdminController {
         return Result.success(courseMapper.selectPage(page, wrapper));
     }
 
+    @GetMapping("/course/{courseId}")
+    public Result<CourseDetailVO> getCourseDetail(@PathVariable Long courseId) {
+        checkAdmin();
+        return Result.success(courseService.getCourseDetail(courseId));
+    }
+
+    @PostMapping("/course/cover")
+    public Result<Map<String, String>> uploadCourseCover(@RequestParam("file") MultipartFile file) throws IOException {
+        checkAdmin();
+
+        String url = fileUtils.uploadFile(file, "course-cover");
+        Map<String, String> data = new HashMap<>();
+        data.put("url", url);
+        return Result.success("Upload successful", data);
+    }
+
     /**
-     * 后台课程新增，保存前统一清洗付费配置。
+     * 鍚庡彴璇剧▼鏂板锛屼繚瀛樺墠缁熶竴娓呮礂浠樿垂閰嶇疆銆?
      */
     @PostMapping("/course")
     public Result<Map<String, Long>> addCourse(@RequestBody Course course) {
@@ -231,7 +252,7 @@ public class AdminController {
     }
 
     /**
-     * 后台课程编辑，避免把非法价格组合直接写进数据库。
+     * 鍚庡彴璇剧▼缂栬緫锛岄伩鍏嶆妸闈炴硶浠锋牸缁勫悎鐩存帴鍐欒繘鏁版嵁搴撱€?
      */
     @PutMapping("/course/{courseId}")
     public Result<?> updateCourse(@PathVariable Long courseId, @RequestBody Course course) {
@@ -277,8 +298,15 @@ public class AdminController {
         if (course == null) {
             throw new BusinessException("Course not found");
         }
+        if (chapter == null || chapter.getTitle() == null || chapter.getTitle().trim().isEmpty()) {
+            throw new BusinessException(400, "Chapter title cannot be empty");
+        }
 
         chapter.setCourseId(courseId);
+        chapter.setTitle(chapter.getTitle().trim());
+        if (chapter.getSort() == null || chapter.getSort() <= 0) {
+            chapter.setSort(getNextChapterSort(courseId));
+        }
         chapterMapper.insert(chapter);
 
         course.setChapterCount((course.getChapterCount() == null ? 0 : course.getChapterCount()) + 1);
@@ -316,12 +344,15 @@ public class AdminController {
             @PathVariable Long chapterId,
             @RequestParam("file") MultipartFile file,
             @RequestParam String title,
-            @RequestParam(defaultValue = "0") Integer sort) throws IOException {
+            @RequestParam(required = false) Integer sort) throws IOException {
         checkAdmin();
 
         CourseChapter chapter = chapterMapper.selectById(chapterId);
         if (chapter == null) {
             throw new BusinessException("Chapter not found");
+        }
+        if (title == null || title.trim().isEmpty()) {
+            throw new BusinessException(400, "Video title cannot be empty");
         }
 
         String videoUrl = fileUtils.uploadFile(file, "video");
@@ -329,9 +360,9 @@ public class AdminController {
         CourseVideo video = new CourseVideo();
         video.setCourseId(chapter.getCourseId());
         video.setChapterId(chapterId);
-        video.setTitle(title);
+        video.setTitle(title.trim());
         video.setVideoUrl(videoUrl);
-        video.setSort(sort);
+        video.setSort(sort != null && sort > 0 ? sort : getNextVideoSort(chapterId));
         video.setDuration(0);
         videoMapper.insert(video);
 
@@ -440,8 +471,8 @@ public class AdminController {
     }
 
     /**
-     * 课程价格归一化。
-     * 免费课程价格强制为 0，只有开关打开且价格大于 0 才算付费。
+     * 璇剧▼浠锋牸褰掍竴鍖栥€?
+     * 鍏嶈垂璇剧▼浠锋牸寮哄埗涓?0锛屽彧鏈夊紑鍏虫墦寮€涓斾环鏍煎ぇ浜?0 鎵嶇畻浠樿垂銆?
      */
     private void normalizeCoursePricing(Course course) {
         if (course == null) {
@@ -452,4 +483,28 @@ public class AdminController {
         course.setRequiresPoints(paidCourse ? 1 : 0);
         course.setPointsCost(paidCourse ? normalizedCost : 0);
     }
+
+    private Integer getNextChapterSort(Long courseId) {
+        List<CourseChapter> chapters = chapterMapper.selectList(new LambdaQueryWrapper<CourseChapter>()
+                .eq(CourseChapter::getCourseId, courseId)
+                .orderByDesc(CourseChapter::getSort)
+                .last("LIMIT 1"));
+        if (chapters.isEmpty() || chapters.get(0).getSort() == null) {
+            return 1;
+        }
+        return chapters.get(0).getSort() + 1;
+    }
+
+    private Integer getNextVideoSort(Long chapterId) {
+        List<CourseVideo> videos = videoMapper.selectList(new LambdaQueryWrapper<CourseVideo>()
+                .eq(CourseVideo::getChapterId, chapterId)
+                .orderByDesc(CourseVideo::getSort)
+                .last("LIMIT 1"));
+        if (videos.isEmpty() || videos.get(0).getSort() == null) {
+            return 1;
+        }
+        return videos.get(0).getSort() + 1;
+    }
 }
+
+

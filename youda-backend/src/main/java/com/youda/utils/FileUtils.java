@@ -19,7 +19,7 @@ import java.util.UUID;
 @Component
 public class FileUtils {
 
-    private static final Set<String> ALLOWED_UPLOAD_TYPES = Set.of("avatar", "post", "resource", "video", "chat");
+    private static final Set<String> ALLOWED_UPLOAD_TYPES = Set.of("avatar", "post", "resource", "video", "chat", "course-cover");
     private static final DateTimeFormatter DATE_PATH_FORMATTER = DateTimeFormatter.ofPattern("yyyy/MM/dd");
 
     @Value("${upload.path}")
@@ -27,7 +27,7 @@ public class FileUtils {
 
     public String uploadFile(MultipartFile file, String type) throws IOException {
         if (file == null || file.isEmpty()) {
-            throw new BusinessException(400, "上传文件不能为空");
+            throw new BusinessException(400, "涓婁紶鏂囦欢涓嶈兘涓虹┖");
         }
 
         String normalizedType = normalizeType(type);
@@ -99,7 +99,7 @@ public class FileUtils {
     private String normalizeType(String type) {
         String normalizedType = (type == null || type.isBlank()) ? "post" : type.trim().toLowerCase();
         if (!ALLOWED_UPLOAD_TYPES.contains(normalizedType)) {
-            throw new BusinessException(400, "不支持的上传类型: " + normalizedType);
+            throw new BusinessException(400, "涓嶆敮鎸佺殑涓婁紶绫诲瀷: " + normalizedType);
         }
         return normalizedType;
     }
@@ -111,3 +111,4 @@ public class FileUtils {
         return "";
     }
 }
+

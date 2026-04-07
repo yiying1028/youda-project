@@ -1,14 +1,14 @@
-<template>
+﻿<template>
   <div class="admin-courses-page">
     <div class="page-top">
       <h2 class="page-title">课程管理</h2>
       <div class="page-actions">
         <a-input-search
           v-model:value="keyword"
-          placeholder="搜索课程名称..."
+          placeholder="搜索课程名称"
           style="width: 240px"
-          @search="handleSearch"
           allow-clear
+          @search="handleSearch"
         />
         <a-button type="primary" @click="openAddModal">
           <plus-outlined /> 新增课程
@@ -24,27 +24,26 @@
         :pagination="pagination"
         row-key="id"
         @change="handleTableChange"
-        :expand-row-by-click="false"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
             <div class="course-cell">
               <img
-                v-if="record.coverImage"
-                :src="record.coverImage"
+                :src="record.coverImage || '/course-cover-fallback.svg'"
                 class="course-mini-cover"
                 alt="课程封面"
+                @error="handleCourseCoverError"
               />
-              <div class="course-mini-cover placeholder-cover" v-else>
-                <play-circle-outlined />
+              <div class="course-main-info">
+                <div class="course-name">{{ record.name }}</div>
+                <div class="course-desc">{{ record.description || '暂无课程简介' }}</div>
               </div>
-              <span>{{ record.name }}</span>
             </div>
           </template>
 
           <template v-else-if="column.key === 'tags'">
-            <a-tag color="blue" size="small">{{ record.subjectName }}</a-tag>
-            <a-tag size="small">{{ record.gradeName }}</a-tag>
+            <a-tag color="blue">{{ getSubjectName(record.subjectId) }}</a-tag>
+            <a-tag>{{ getGradeName(record.gradeId) }}</a-tag>
           </template>
 
           <template v-else-if="column.key === 'pricing'">
@@ -53,20 +52,20 @@
             </a-tag>
           </template>
 
-          <template v-else-if="column.key === 'videoCount'">
-            {{ record.videoCount || 0 }} 节
+          <template v-else-if="column.key === 'chapterCount'">
+            {{ record.chapterCount || 0 }} 章
           </template>
 
           <template v-else-if="column.key === 'action'">
             <a-button type="link" size="small" @click="openChapterModal(record)">
-              章节
+              章节与视频
             </a-button>
             <a-divider type="vertical" />
             <a-button type="link" size="small" @click="openEditModal(record)">
               编辑
             </a-button>
             <a-divider type="vertical" />
-            <a-popconfirm title="确定删除该课程及其所有章节视频？" @confirm="handleDelete(record.id)">
+            <a-popconfirm title="确定删除该课程及其章节和视频吗？" @confirm="handleDelete(record.id)">
               <a-button type="link" danger size="small">删除</a-button>
             </a-popconfirm>
           </template>
@@ -78,13 +77,14 @@
       v-model:open="showCourseModal"
       :title="editingCourse ? '编辑课程' : '新增课程'"
       :footer="null"
-      width="560px"
+      width="680px"
       :destroy-on-close="true"
+      @cancel="closeCourseModal"
     >
       <a-form
+        ref="courseFormRef"
         :model="courseForm"
         :rules="courseRules"
-        ref="courseFormRef"
         layout="vertical"
         @finish="handleSaveCourse"
       >
@@ -95,9 +95,9 @@
         <a-form-item label="课程描述" name="description">
           <a-textarea
             v-model:value="courseForm.description"
-            placeholder="请输入课程描述"
-            :rows="3"
+            :rows="4"
             :maxlength="500"
+            placeholder="请输入课程简介"
           />
         </a-form-item>
 
@@ -105,8 +105,8 @@
           <a-col :span="12">
             <a-form-item label="科目" name="subjectId">
               <a-select v-model:value="courseForm.subjectId" placeholder="请选择科目">
-                <a-select-option v-for="s in subjects" :key="s.id" :value="s.id">
-                  {{ s.name }}
+                <a-select-option v-for="item in subjects" :key="item.id" :value="item.id">
+                  {{ item.name }}
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -114,8 +114,8 @@
           <a-col :span="12">
             <a-form-item label="年级" name="gradeId">
               <a-select v-model:value="courseForm.gradeId" placeholder="请选择年级">
-                <a-select-option v-for="g in grades" :key="g.id" :value="g.id">
-                  {{ g.name }}
+                <a-select-option v-for="item in grades" :key="item.id" :value="item.id">
+                  {{ item.name }}
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -126,8 +126,37 @@
           <a-input v-model:value="courseForm.teacherName" placeholder="请输入主讲老师姓名" />
         </a-form-item>
 
-        <a-form-item label="课程封面 URL" name="coverImage">
-          <a-input v-model:value="courseForm.coverImage" placeholder="请输入封面图片 URL（可选）" />
+        <a-form-item label="课程封面">
+          <div class="cover-uploader">
+            <div class="cover-preview-box">
+              <img
+                v-if="courseForm.coverImage"
+                :src="courseForm.coverImage"
+                alt="课程封面预览"
+                class="cover-preview"
+                @error="handleCourseCoverError"
+              />
+              <div v-else class="cover-preview-empty">
+                <picture-outlined />
+                <span>暂无封面</span>
+              </div>
+            </div>
+            <div class="cover-upload-actions">
+              <a-upload
+                :show-upload-list="false"
+                :before-upload="handleCoverUpload"
+                accept="image/*"
+              >
+                <a-button :loading="coverUploading">
+                  <upload-outlined /> 选择本地图片
+                </a-button>
+              </a-upload>
+              <div class="cover-upload-tip">点击按钮后会打开本地文件夹，上传成功后自动回填封面。</div>
+              <a-button v-if="courseForm.coverImage" type="link" danger @click="courseForm.coverImage = ''">
+                清除封面
+              </a-button>
+            </div>
+          </div>
         </a-form-item>
 
         <a-form-item label="课程类型">
@@ -143,12 +172,12 @@
             :min="1"
             :precision="0"
             style="width: 100%"
-            placeholder="请输入课程解锁所需积分"
+            placeholder="请输入解锁课程需要的积分"
           />
         </a-form-item>
 
-        <div style="display: flex; justify-content: flex-end; gap: 8px">
-          <a-button @click="showCourseModal = false">取消</a-button>
+        <div class="modal-actions">
+          <a-button @click="closeCourseModal">取消</a-button>
           <a-button type="primary" html-type="submit" :loading="saving">
             {{ editingCourse ? '保存修改' : '创建课程' }}
           </a-button>
@@ -158,86 +187,108 @@
 
     <a-modal
       v-model:open="showChapterModal"
-      :title="'章节管理 - ' + (selectedCourse?.name || '')"
-      width="680px"
+      :title="selectedCourse ? `章节管理 - ${selectedCourse.name}` : '章节管理'"
       :footer="null"
+      width="760px"
       :destroy-on-close="true"
+      @cancel="closeChapterModal"
     >
-      <div class="chapter-manager">
-        <div class="add-chapter">
-          <a-input
-            v-model:value="newChapterTitle"
-            placeholder="输入章节标题"
-            style="flex: 1"
-          />
-          <a-button type="primary" @click="handleAddChapter" :loading="chapterAdding">
-            添加章节
-          </a-button>
-        </div>
-
-        <div class="chapter-list">
-          <div
-            v-for="chapter in selectedCourse?.chapters"
-            :key="chapter.id"
-            class="chapter-block"
-          >
-            <div class="chapter-head">
-              <folder-outlined />
-              <span class="chapter-name">{{ chapter.title }}</span>
-              <span class="chapter-video-count">{{ chapter.videos?.length || 0 }} 节</span>
-              <a-upload
-                :before-upload="(file) => handleVideoUpload(chapter.id, file)"
-                accept="video/*"
-                :show-upload-list="false"
-              >
-                <a-button size="small" type="link">
-                  <upload-outlined /> 上传视频
-                </a-button>
-              </a-upload>
+      <a-spin :spinning="chapterLoading">
+        <div v-if="selectedCourse" class="chapter-manager">
+          <div class="chapter-manager-head">
+            <div>
+              <div class="chapter-manager-title">{{ selectedCourse.name }}</div>
+              <div class="chapter-manager-subtitle">先新增章节，再把课程视频上传到对应章节。</div>
             </div>
+            <a-tag color="blue">{{ selectedCourse.chapters.length }} 个章节</a-tag>
+          </div>
 
-            <div
-              v-for="video in chapter.videos"
-              :key="video.id"
-              class="video-row"
-            >
-              <play-square-outlined class="video-row-icon" />
-              <span class="video-row-title">{{ video.title }}</span>
-              <span class="video-row-duration" v-if="video.duration">
-                {{ formatDuration(video.duration) }}
-              </span>
+          <div class="add-chapter">
+            <a-input
+              v-model:value="newChapterTitle"
+              placeholder="输入章节标题，例如：第一章 课程导读"
+              @pressEnter="handleAddChapter"
+            />
+            <a-button type="primary" :loading="chapterAdding" @click="handleAddChapter">
+              添加章节
+            </a-button>
+          </div>
+
+          <div v-if="selectedCourse.chapters.length" class="chapter-list">
+            <div v-for="chapter in selectedCourse.chapters" :key="chapter.chapterId" class="chapter-card">
+              <div class="chapter-head">
+                <div class="chapter-head-left">
+                  <folder-outlined class="chapter-icon" />
+                  <div>
+                    <div class="chapter-name">{{ chapter.title }}</div>
+                    <div class="chapter-meta">{{ chapter.videos.length }} 个视频</div>
+                  </div>
+                </div>
+                <a-upload
+                  :show-upload-list="false"
+                  :before-upload="(file) => handleVideoUpload(chapter, file)"
+                  accept="video/*"
+                >
+                  <a-button size="small" :loading="uploadingChapterId === chapter.chapterId">
+                    <upload-outlined /> 上传视频
+                  </a-button>
+                </a-upload>
+              </div>
+
+              <div v-if="chapter.videos.length" class="video-list">
+                <div v-for="video in chapter.videos" :key="video.videoId" class="video-row">
+                  <div class="video-info">
+                    <play-square-outlined class="video-icon" />
+                    <span class="video-title">{{ video.title }}</span>
+                  </div>
+                  <span class="video-duration">{{ formatDuration(video.duration) }}</span>
+                </div>
+              </div>
+              <div v-else class="empty-videos">当前章节还没有视频，点击右侧按钮上传。</div>
             </div>
           </div>
 
-          <div v-if="!selectedCourse?.chapters?.length" class="no-chapters">
-            <p>暂无章节，请先添加章节</p>
+          <div v-else class="no-chapters">
+            还没有章节。先添加章节，随后就能看到对应的“上传视频”按钮。
           </div>
         </div>
-      </div>
+      </a-spin>
     </a-modal>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
-import {
-  getAdminCourseList,
-  adminAddCourse,
-  adminUpdateCourse,
-  adminDeleteCourse,
-  adminAddChapter,
-  adminUploadVideo,
-  getSubjectList,
-  getGradeList
-} from '@/api/index.js'
+import { onMounted, reactive, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import {
-  PlusOutlined,
+  adminAddChapter,
+  adminAddCourse,
+  adminDeleteCourse,
+  adminUpdateCourse,
+  adminUploadCourseCover,
+  adminUploadVideo,
+  getAdminCourseDetail,
+  getAdminCourseList,
+  getGradeList,
+  getSubjectList
+} from '@/api/index.js'
+import {
+  FolderOutlined,
+  PictureOutlined,
   PlayCircleOutlined,
   PlaySquareOutlined,
-  FolderOutlined,
+  PlusOutlined,
   UploadOutlined
 } from '@ant-design/icons-vue'
+
+const columns = [
+  { title: '课程', key: 'name', width: '34%' },
+  { title: '分类', key: 'tags', width: 180 },
+  { title: '费用', key: 'pricing', width: 120 },
+  { title: '主讲', dataIndex: 'teacherName', width: 120 },
+  { title: '章节数', key: 'chapterCount', width: 100 },
+  { title: '操作', key: 'action', width: 220 }
+]
 
 const courses = ref([])
 const loading = ref(false)
@@ -246,33 +297,41 @@ const pagination = reactive({
   current: 1,
   pageSize: 10,
   total: 0,
-  showTotal: (t) => `共 ${t} 门课程`,
-  showQuickJumper: true
+  showQuickJumper: true,
+  showTotal: (total) => `共 ${total} 门课程`
 })
 
 const subjects = ref([])
 const grades = ref([])
+const subjectNameMap = ref({})
+const gradeNameMap = ref({})
+
 const showCourseModal = ref(false)
 const editingCourse = ref(null)
 const saving = ref(false)
+const coverUploading = ref(false)
 const courseFormRef = ref()
-const courseForm = reactive({
+
+const showChapterModal = ref(false)
+const selectedCourse = ref(null)
+const chapterLoading = ref(false)
+const chapterAdding = ref(false)
+const uploadingChapterId = ref(null)
+const newChapterTitle = ref('')
+
+const createEmptyCourseForm = () => ({
   name: '',
   description: '',
-  subjectId: null,
-  gradeId: null,
+  subjectId: undefined,
+  gradeId: undefined,
   teacherName: '',
   coverImage: '',
   requiresPoints: 0,
   pointsCost: 0
 })
 
-const showChapterModal = ref(false)
-const selectedCourse = ref(null)
-const newChapterTitle = ref('')
-const chapterAdding = ref(false)
+const courseForm = reactive(createEmptyCourseForm())
 
-// 只有付费课程才强制要求填写积分价格。
 const courseRules = {
   name: [{ required: true, message: '请输入课程名称', trigger: 'blur' }],
   subjectId: [{ required: true, message: '请选择科目', trigger: 'change' }],
@@ -282,27 +341,80 @@ const courseRules = {
       if (courseForm.requiresPoints !== 1 || Number(value) > 0) {
         return Promise.resolve()
       }
-      return Promise.reject(new Error('请输入大于 0 的积分数'))
+      return Promise.reject(new Error('付费课程的积分必须大于 0'))
     },
     trigger: 'change'
   }]
 }
 
-const columns = [
-  { title: '课程', key: 'name', width: '28%' },
-  { title: '分类', key: 'tags', width: 160 },
-  { title: '费用', key: 'pricing', width: 120 },
-  { title: '主讲', dataIndex: 'teacherName', width: 100 },
-  { title: '课时', key: 'videoCount', width: 80 },
-  { title: '操作', key: 'action', width: 160 }
-]
-
-// 统一判断课程是否为付费课程，列表渲染和编辑回填都靠它。
-function isPaidCourse(record) {
-  return record?.requiresPoints === 1 && Number(record?.pointsCost) > 0
+function resetCourseForm() {
+  Object.assign(courseForm, createEmptyCourseForm())
 }
 
-// 加载课程列表数据。
+function normalizeCourseRecord(record = {}) {
+  return {
+    ...record,
+    id: record.id ?? record.courseId ?? null,
+    coverImage: record.coverImage ?? '',
+    chapterCount: record.chapterCount ?? 0,
+    pointsCost: Number(record.pointsCost ?? 0),
+    requiresPoints: Number(record.requiresPoints ?? 0)
+  }
+}
+
+function normalizeCourseDetail(course = {}) {
+  return {
+    ...course,
+    id: course.id ?? course.courseId ?? null,
+    courseId: course.courseId ?? course.id ?? null,
+    coverImage: course.coverImage ?? '',
+    chapters: Array.isArray(course.chapters)
+      ? course.chapters.map((chapter) => ({
+          ...chapter,
+          chapterId: chapter.chapterId ?? chapter.id ?? null,
+          videos: Array.isArray(chapter.videos)
+            ? chapter.videos.map((video) => ({
+                ...video,
+                videoId: video.videoId ?? video.id ?? null,
+                duration: Number(video.duration ?? 0)
+              }))
+            : []
+        }))
+      : []
+  }
+}
+
+function isPaidCourse(record) {
+  return Number(record?.requiresPoints) === 1 && Number(record?.pointsCost) > 0
+}
+
+function getSubjectName(subjectId) {
+  return subjectNameMap.value[subjectId] || '未分类'
+}
+
+function getGradeName(gradeId) {
+  return gradeNameMap.value[gradeId] || '未分级'
+}
+
+function handleCourseCoverError(event) {
+  if (event?.target && !event.target.src.endsWith('/course-cover-fallback.svg')) {
+    event.target.src = '/course-cover-fallback.svg'
+  }
+}
+
+function closeCourseModal() {
+  showCourseModal.value = false
+  editingCourse.value = null
+  resetCourseForm()
+}
+
+function closeChapterModal() {
+  showChapterModal.value = false
+  selectedCourse.value = null
+  newChapterTitle.value = ''
+  uploadingChapterId.value = null
+}
+
 async function loadCourses() {
   loading.value = true
   try {
@@ -311,34 +423,42 @@ async function loadCourses() {
       size: pagination.pageSize,
       keyword: keyword.value || undefined
     })
-    courses.value = data?.records || data || []
-    pagination.total = data?.total || 0
+    const records = data?.records || data || []
+    courses.value = records.map(normalizeCourseRecord)
+    pagination.total = data?.total || records.length || 0
   } finally {
     loading.value = false
   }
 }
 
-// 打开新增弹窗时重置字段，避免沿用上一次编辑状态。
+async function loadOptions() {
+  const [subjectRes, gradeRes] = await Promise.allSettled([getSubjectList(), getGradeList()])
+  if (subjectRes.status === 'fulfilled') {
+    subjects.value = subjectRes.value || []
+    subjectNameMap.value = subjects.value.reduce((map, item) => {
+      map[item.id] = item.name
+      return map
+    }, {})
+  }
+  if (gradeRes.status === 'fulfilled') {
+    grades.value = gradeRes.value || []
+    gradeNameMap.value = grades.value.reduce((map, item) => {
+      map[item.id] = item.name
+      return map
+    }, {})
+  }
+}
+
 function openAddModal() {
   editingCourse.value = null
-  Object.assign(courseForm, {
-    name: '',
-    description: '',
-    subjectId: null,
-    gradeId: null,
-    teacherName: '',
-    coverImage: '',
-    requiresPoints: 0,
-    pointsCost: 0
-  })
+  resetCourseForm()
   showCourseModal.value = true
 }
 
-// 打开编辑弹窗时回填基础信息和付费配置。
 function openEditModal(record) {
   editingCourse.value = record
   Object.assign(courseForm, {
-    name: record.name,
+    name: record.name || '',
     description: record.description || '',
     subjectId: record.subjectId,
     gradeId: record.gradeId,
@@ -350,103 +470,149 @@ function openEditModal(record) {
   showCourseModal.value = true
 }
 
-// 保存课程新增/编辑，提交前再次兜底校验积分价格。
+async function handleCoverUpload(file) {
+  coverUploading.value = true
+  const formData = new FormData()
+  formData.append('file', file)
+  try {
+    const data = await adminUploadCourseCover(formData)
+    courseForm.coverImage = data?.url || ''
+    message.success('课程封面上传成功')
+  } finally {
+    coverUploading.value = false
+  }
+  return false
+}
+
 async function handleSaveCourse() {
   if (courseForm.requiresPoints === 1 && Number(courseForm.pointsCost) <= 0) {
-    message.warning('付费课程请设置大于 0 的积分价格')
+    message.warning('付费课程必须设置大于 0 的积分')
     return
-  }
-
-  const payload = {
-    ...courseForm,
-    pointsCost: courseForm.requiresPoints === 1 ? Number(courseForm.pointsCost) : 0
   }
 
   saving.value = true
   try {
+    const payload = {
+      name: courseForm.name.trim(),
+      description: courseForm.description?.trim() || '',
+      subjectId: courseForm.subjectId,
+      gradeId: courseForm.gradeId,
+      teacherName: courseForm.teacherName?.trim() || '',
+      coverImage: courseForm.coverImage || '',
+      requiresPoints: courseForm.requiresPoints,
+      pointsCost: courseForm.requiresPoints === 1 ? Number(courseForm.pointsCost) : 0
+    }
+
     if (editingCourse.value) {
       await adminUpdateCourse(editingCourse.value.id, payload)
-      message.success('课程信息已更新')
+      message.success('课程已更新')
     } else {
       await adminAddCourse(payload)
-      message.success('课程创建成功')
+      message.success('课程已创建')
     }
-    showCourseModal.value = false
-    loadCourses()
+
+    closeCourseModal()
+    await loadCourses()
   } finally {
     saving.value = false
   }
 }
 
-// 删除课程后刷新列表。
-async function handleDelete(id) {
+async function handleDelete(courseId) {
+  await adminDeleteCourse(courseId)
+  message.success('课程已删除')
+  await loadCourses()
+}
+
+async function reloadSelectedCourse(courseId = selectedCourse.value?.id) {
+  if (!courseId) {
+    return
+  }
+  chapterLoading.value = true
   try {
-    await adminDeleteCourse(id)
-    message.success('课程已删除')
-    loadCourses()
-  } catch {}
+    const data = await getAdminCourseDetail(courseId)
+    selectedCourse.value = normalizeCourseDetail(data)
+  } finally {
+    chapterLoading.value = false
+  }
 }
 
-// 打开章节管理弹窗。
-function openChapterModal(record) {
-  selectedCourse.value = record
+async function openChapterModal(record) {
+  selectedCourse.value = normalizeCourseDetail({
+    id: record.id,
+    courseId: record.id,
+    name: record.name,
+    chapters: []
+  })
+  newChapterTitle.value = ''
   showChapterModal.value = true
+  await reloadSelectedCourse(record.id)
 }
 
-// 给当前课程新增章节。
 async function handleAddChapter() {
-  if (!newChapterTitle.value.trim()) {
+  const title = newChapterTitle.value.trim()
+  if (!title) {
     message.warning('请输入章节标题')
     return
   }
+  if (!selectedCourse.value?.id) {
+    return
+  }
+
   chapterAdding.value = true
   try {
-    await adminAddChapter(selectedCourse.value.id, { title: newChapterTitle.value })
+    await adminAddChapter(selectedCourse.value.id, {
+      title,
+      sort: (selectedCourse.value.chapters?.length || 0) + 1
+    })
     message.success('章节添加成功')
     newChapterTitle.value = ''
-    loadCourses()
+    await Promise.all([reloadSelectedCourse(), loadCourses()])
   } finally {
     chapterAdding.value = false
   }
 }
 
-// 把上传的视频挂到指定章节下。
-async function handleVideoUpload(chapterId, file) {
+async function handleVideoUpload(chapter, file) {
+  const chapterId = chapter.chapterId
+  if (!chapterId) {
+    return false
+  }
+
+  uploadingChapterId.value = chapterId
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('title', file.name.replace(/\.[^.]+$/, ''))
+  formData.append('title', file.name.replace(/\.[^.]+$/, '') || '未命名视频')
+  formData.append('sort', String((chapter.videos?.length || 0) + 1))
+
   try {
     await adminUploadVideo(chapterId, formData)
-    message.success('视频上传成功')
-    loadCourses()
-  } catch {}
+    message.success('课程视频上传成功')
+    await Promise.all([reloadSelectedCourse(), loadCourses()])
+  } finally {
+    uploadingChapterId.value = null
+  }
+
   return false
 }
 
 function formatDuration(seconds) {
-  if (!seconds) return ''
-  const m = Math.floor(seconds / 60)
-  const s = Math.floor(seconds % 60)
-  return `${m}:${s.toString().padStart(2, '0')}`
+  if (!seconds) {
+    return '时长待解析'
+  }
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
-// 搜索时回到第一页并重新拉取课程列表。
 function handleSearch() {
   pagination.current = 1
   loadCourses()
 }
 
-// 表格翻页时重新加载课程列表。
 function handleTableChange(pag) {
   pagination.current = pag.current
   loadCourses()
-}
-
-// 加载课程表单使用的科目、年级选项。
-async function loadOptions() {
-  const [subData, gradeData] = await Promise.allSettled([getSubjectList(), getGradeList()])
-  if (subData.status === 'fulfilled') subjects.value = subData.value || []
-  if (gradeData.status === 'fulfilled') grades.value = gradeData.value || []
 }
 
 onMounted(() => {
@@ -456,128 +622,282 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.admin-courses-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .page-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  gap: 12px;
 }
 
 .page-title {
-  font-size: 20px;
-  font-weight: 700;
-  color: #262626;
   margin: 0;
+  color: #1f2937;
+  font-size: 22px;
+  font-weight: 700;
 }
 
 .page-actions {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 12px;
 }
 
 .table-card {
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 .course-cell {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .course-mini-cover {
-  width: 48px;
-  height: 34px;
-  border-radius: 4px;
+  width: 64px;
+  height: 46px;
+  border-radius: 10px;
   object-fit: cover;
+  background: #f3f4f6;
   flex-shrink: 0;
 }
 
-.placeholder-cover {
-  background: linear-gradient(135deg, #e8f0fe, #c8dcff);
+.course-main-info {
+  min-width: 0;
+}
+
+.course-name {
+  color: #111827;
+  font-weight: 600;
+}
+
+.course-desc {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.cover-uploader {
   display: flex;
   align-items: center;
+  gap: 16px;
+}
+
+.cover-preview-box {
+  width: 220px;
+  height: 132px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f5efe2 0%, #ece7dd 100%);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  flex-shrink: 0;
+}
+
+.cover-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-preview-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  color: #1677ff;
-  font-size: 16px;
+  gap: 10px;
+  color: #64748b;
+}
+
+.cover-preview-empty :deep(svg) {
+  font-size: 28px;
+}
+
+.cover-upload-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cover-upload-tip {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .chapter-manager {
-  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 260px;
+}
+
+.chapter-manager-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.chapter-manager-title {
+  color: #111827;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.chapter-manager-subtitle {
+  margin-top: 4px;
+  color: #6b7280;
+  font-size: 13px;
 }
 
 .add-chapter {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
 }
 
 .chapter-list {
-  max-height: 400px;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.chapter-block {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  margin-bottom: 10px;
-  overflow: hidden;
+.chapter-card {
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 16px;
+  background: #fbfdff;
+  padding: 16px;
 }
 
 .chapter-head {
   display: flex;
+  justify-content: space-between;
+  gap: 16px;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: #fafafa;
-  border-bottom: 1px solid #f0f0f0;
+}
+
+.chapter-head-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.chapter-icon {
+  color: #2563eb;
+  font-size: 18px;
 }
 
 .chapter-name {
-  flex: 1;
-  font-size: 14px;
+  color: #111827;
+  font-size: 15px;
   font-weight: 600;
-  color: #262626;
 }
 
-.chapter-video-count {
+.chapter-meta {
+  margin-top: 4px;
+  color: #6b7280;
   font-size: 12px;
-  color: #8c8c8c;
+}
+
+.video-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .video-row {
   display: flex;
+  justify-content: space-between;
+  gap: 16px;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #f5f5f5;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
-.video-row:last-child {
-  border-bottom: none;
+.video-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
 }
 
-.video-row-icon {
-  color: #1677ff;
-  font-size: 14px;
+.video-icon {
+  color: #0f766e;
 }
 
-.video-row-title {
-  flex: 1;
-  font-size: 13px;
-  color: #434343;
+.video-title {
+  color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.video-row-duration {
+.video-duration {
+  color: #64748b;
   font-size: 12px;
-  color: #bfbfbf;
+  flex-shrink: 0;
+}
+
+.empty-videos,
+.no-chapters {
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.empty-videos {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #f8fafc;
 }
 
 .no-chapters {
+  padding: 28px 0;
   text-align: center;
-  padding: 32px;
-  color: #bfbfbf;
+}
+
+@media (max-width: 768px) {
+  .page-top,
+  .page-actions,
+  .cover-uploader,
+  .chapter-head,
+  .chapter-manager-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .add-chapter {
+    grid-template-columns: 1fr;
+  }
+
+  .cover-preview-box {
+    width: 100%;
+    height: 180px;
+  }
+
+  .video-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
+
