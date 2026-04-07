@@ -193,8 +193,13 @@ const formRules = {
 async function handleRegister() {
   loading.value = true
   try {
-    // 构建注册请求数据（排除确认密码和同意协议字段）
-    const { confirmPassword, agree, ...submitData } = registerForm
+    const submitData = {
+      username: registerForm.username,
+      nickname: registerForm.nickname,
+      phone: registerForm.phone,
+      password: registerForm.password,
+      confirmPassword: registerForm.confirmPassword
+    }
     await userRegister(submitData)
     message.success('注册成功！请登录您的账号')
     router.push('/login')
