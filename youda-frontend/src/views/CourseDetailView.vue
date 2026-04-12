@@ -77,6 +77,25 @@
           <template #extra><a-button type="primary" @click="router.push('/courses')">返回课程中心</a-button></template>
         </a-result>
       </a-spin>
+      <a-modal
+        v-model:open="paymentSuccessVisible"
+        title="支付成功"
+        :footer="null"
+        centered
+        width="420px"
+      >
+        <div class="payment-success-modal">
+          <div class="payment-success-modal__title">课程已解锁，可以开始学习了</div>
+          <div class="payment-success-modal__desc">
+            <span v-if="paymentSuccessOrderNo">订单号：{{ paymentSuccessOrderNo }}</span>
+            <span v-if="course?.name">课程：{{ course.name }}</span>
+          </div>
+          <div class="payment-success-modal__actions">
+            <a-button @click="paymentSuccessVisible = false">稍后学习</a-button>
+            <a-button type="primary" :disabled="!firstVideoId" @click="handleGoLearnFromSuccess">立即学习</a-button>
+          </div>
+        </div>
+      </a-modal>
     </div>
   </div>
 </template>
@@ -95,6 +114,8 @@ const chapters = ref([])
 const loading = ref(true)
 const actionLoading = ref(false)
 const openChapters = ref([])
+const paymentSuccessVisible = ref(false)
+const paymentSuccessOrderNo = ref('')
 const firstVideoId = computed(() => { for (const chapter of chapters.value) { if (chapter.videos?.length > 0) return chapter.videos[0].id } return null })
 const hasStarted = computed(() => Boolean(course.value?.progress && course.value.progress.completedCount > 0))
 const accessDescription = computed(() => {
@@ -125,6 +146,7 @@ const primaryActionText = computed(() => {
 function formatPrice(value) { return `￥${Number(value || 0).toFixed(2)}` }
 function statusColor(status) { if (status === 0) return 'orange'; if (status === 1) return 'blue'; if (status === 2) return 'green'; return 'default' }
 function goToVideo(videoId) { if (!course.value?.id || !videoId) return; router.push(`/course/${course.value.id}/video/${videoId}`) }
+function handleGoLearnFromSuccess() { paymentSuccessVisible.value = false; if (firstVideoId.value) goToVideo(firstVideoId.value) }
 function handleVideoClick(videoId) { if (course.value?.requiresPurchase && !course.value?.canLearn) { message.warning(course.value.canPay ? '请先完成支付' : '请先下单并支付课程订单'); return } goToVideo(videoId) }
 function formatDuration(seconds) { if (!seconds) return ''; const minutes = Math.floor(seconds / 60); const remain = Math.floor(seconds % 60); return `${minutes}:${remain.toString().padStart(2, '0')}` }
 function formatTime(time) { return time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '--' }
@@ -141,10 +163,11 @@ async function handlePrimaryAction() {
       return
     }
     if (course.value.canPay && course.value.orderId) {
-      await payCourseOrder(course.value.orderId)
+      const result = await payCourseOrder(course.value.orderId)
+      paymentSuccessOrderNo.value = result?.orderNo || course.value.orderNo || ''
       message.success('支付成功')
       await loadCourse()
-      if (firstVideoId.value) goToVideo(firstVideoId.value)
+      paymentSuccessVisible.value = true
       return
     }
     if (course.value.canComplete && course.value.orderId) await completeCourseOrder(course.value.orderId).catch(() => null)
@@ -189,6 +212,9 @@ onMounted(() => { loadCourse() })
 .stat-label { color: #6b7280; }
 .stat-val { color: #1f2430; font-weight: 700; text-align: right; }
 .stat-order-no { font-size: 12px; word-break: break-all; max-width: 150px; }
+.payment-success-modal__title { font-size: 18px; font-weight: 700; color: #1f2430; }
+.payment-success-modal__desc { margin-top: 12px; display: grid; gap: 6px; color: #6b7280; line-height: 1.6; }
+.payment-success-modal__actions { margin-top: 24px; display: flex; justify-content: flex-end; gap: 10px; }
 @media (max-width: 960px) { .detail-layout { grid-template-columns: 1fr; } .course-banner { grid-template-columns: 1fr; } }
 @media (max-width: 768px) { .course-detail-inner { padding: 16px; } }
 </style>
