@@ -7,10 +7,11 @@ WORKDIR /app
 ENV MAVEN_OPTS="-Djava.net.preferIPv4Stack=true -Djava.net.preferIPv6Addresses=false"
 
 COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY settings-docker.xml /root/.m2/settings.xml
+RUN mvn dependency:go-offline -B -s /root/.m2/settings.xml -Dmaven.wagon.http.retryHandler.count=3
 
 COPY src ./src
-RUN mvn clean package -DskipTests -B
+RUN mvn clean package -DskipTests -B -s /root/.m2/settings.xml -Dmaven.wagon.http.retryHandler.count=3
 
 FROM ${JRE_IMAGE}
 
