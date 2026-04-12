@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="admin-courses-page">
     <div class="page-top">
       <h2 class="page-title">课程管理</h2>
@@ -12,7 +12,7 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'name'">
             <div class="course-cell">
-              <img :src="record.coverImage || '/course-cover-fallback.svg'" class="course-mini-cover" alt="course cover" @error="handleCourseCoverError" />
+              <img :src="record.coverImage || '/course-cover-fallback.svg'" class="course-mini-cover" alt="课程封面" @error="handleCourseCoverError" />
               <div class="course-main-info"><div class="course-name">{{ record.name }}</div><div class="course-desc">{{ record.description || '暂无课程简介' }}</div></div>
             </div>
           </template>

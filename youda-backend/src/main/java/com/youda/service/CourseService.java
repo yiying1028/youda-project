@@ -22,9 +22,15 @@ public interface CourseService extends IService<Course> {
 
     List<CourseOrderVO> getMyCourseOrders();
 
+    IPage<CourseOrderVO> getAdminCourseOrders(Integer current, Integer size, Integer status, String keyword);
+
     Map<String, Object> payCourseOrder(Long orderId);
 
     Map<String, Object> completeCourseOrder(Long orderId);
+
+    Map<String, Object> adminPayCourseOrder(Long orderId);
+
+    Map<String, Object> adminCompleteCourseOrder(Long orderId);
 
     VideoPlayVO getVideoPlayInfo(Long videoId);
 

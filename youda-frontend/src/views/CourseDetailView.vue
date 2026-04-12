@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="course-detail-page">
     <div class="course-detail-inner">
       <a-button type="link" class="back-btn" @click="router.push('/courses')">
@@ -23,7 +23,7 @@
                   <span><team-outlined /> {{ course.learnCount || 0 }} 人学习</span>
                 </div>
               </div>
-              <img :src="course.cover || '/course-cover-fallback.svg'" class="banner-cover" alt="course cover" @error="handleCoverError" />
+              <img :src="course.cover || '/course-cover-fallback.svg'" class="banner-cover" alt="课程封面" @error="handleCoverError" />
             </div>
             <a-alert v-if="course.requiresPurchase && !course.hasOrder" type="info" show-icon class="order-alert" message="该课程通过订单购买" description="先创建课程订单，再完成支付即可立即解锁课程，课程购买不扣积分。" />
             <a-alert v-else-if="course.requiresPurchase && course.canPay" type="warning" show-icon class="order-alert" message="订单待支付" :description="pendingPaymentDescription" />

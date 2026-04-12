@@ -12,6 +12,12 @@ public class CourseOrderVO {
 
     private String orderNo;
 
+    private Long userId;
+
+    private String username;
+
+    private String nickname;
+
     private Integer orderStatus;
 
     private String orderStatusLabel;

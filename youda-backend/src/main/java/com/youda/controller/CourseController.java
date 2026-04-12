@@ -45,7 +45,7 @@ public class CourseController {
 
     @PostMapping("/{courseId}/purchase")
     public Result<Map<String, Object>> purchaseCourse(@PathVariable Long courseId) {
-        return Result.success("Order created", courseService.purchaseCourse(courseId));
+        return Result.success("订单创建成功", courseService.purchaseCourse(courseId));
     }
 
     @GetMapping("/order/my")
@@ -55,17 +55,17 @@ public class CourseController {
 
     @PostMapping("/order/{orderId}/pay")
     public Result<Map<String, Object>> payCourseOrder(@PathVariable Long orderId) {
-        return Result.success("Payment successful", courseService.payCourseOrder(orderId));
+        return Result.success("支付成功", courseService.payCourseOrder(orderId));
     }
 
     @PostMapping("/order/{orderId}/complete")
     public Result<Map<String, Object>> completeCourseOrder(@PathVariable Long orderId) {
-        return Result.success("Order completed", courseService.completeCourseOrder(orderId));
+        return Result.success("订单已完成", courseService.completeCourseOrder(orderId));
     }
 
     @PostMapping("/order/{orderId}/receive")
     public Result<Map<String, Object>> confirmCourseOrderReceived(@PathVariable Long orderId) {
-        return Result.success("Order completed", courseService.completeCourseOrder(orderId));
+        return Result.success("订单已完成", courseService.completeCourseOrder(orderId));
     }
 
     @GetMapping("/video/{videoId}")
@@ -77,7 +77,7 @@ public class CourseController {
     public Result<Map<String, Object>> updateProgress(
             @PathVariable Long videoId,
             @Valid @RequestBody ProgressUpdateDTO dto) {
-        return Result.success("Update successful", courseService.updateProgress(videoId, dto));
+        return Result.success("更新成功", courseService.updateProgress(videoId, dto));
     }
 
     @GetMapping("/learning-records")

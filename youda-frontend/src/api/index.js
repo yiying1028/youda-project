@@ -23,7 +23,7 @@ const normalizeChatId = (value, seen = new WeakSet()) => {
 const resolveChatId = (value) => {
   const chatId = normalizeChatId(value)
   if (!chatId) {
-    throw new Error('Invalid chatId')
+    throw new Error('无效的会话标识')
   }
   return encodeURIComponent(chatId)
 }
@@ -150,6 +150,9 @@ const normalizeCourseOrder = (order = {}) => {
     ...order,
     id: orderId,
     orderId,
+    userId: order.userId ?? null,
+    username: order.username ?? '',
+    nickname: order.nickname ?? '',
     orderNo: order.orderNo ?? '',
     orderStatus,
     orderStatusLabel: order.orderStatusLabel ?? '',
@@ -162,10 +165,9 @@ const normalizeCourseOrder = (order = {}) => {
     completedTime: order.completedTime ?? null,
     canPay,
     canLearn,
-    canComplete: orderStatus === 1
+    canComplete: order.canComplete !== undefined ? Boolean(order.canComplete) : orderStatus === 1
   }
 }
-
 const normalizeVideoPlay = (video = {}) => ({
   ...video,
   id: video.id ?? video.videoId ?? null,
@@ -196,20 +198,20 @@ const normalizeDownloadError = async (error) => {
     localStorage.removeItem('youda_token')
     localStorage.removeItem('youda_userInfo')
     window.location.href = '/login'
-    return new Error('Login expired, please sign in again')
+    return new Error('登录已过期，请重新登录')
   }
 
   if (error.response?.data instanceof Blob) {
     try {
       const text = await error.response.data.text()
       const payload = JSON.parse(text)
-      return new Error(payload.message || 'Download failed')
+      return new Error(payload.message || '下载失败')
     } catch {
-      return new Error('Download failed')
+      return new Error('下载失败')
     }
   }
 
-  return new Error(error.response?.data?.message || error.message || 'Download failed')
+  return new Error(error.response?.data?.message || error.message || '下载失败')
 }
 const normalizePage = (result, itemMapper) => {
   if (!result) return result
@@ -260,7 +262,7 @@ export const purchaseResource = (id) => request.post(`/resource/${id}/purchase`)
 export const downloadResource = async (id) => {
   const resourceId = id?.resourceId ?? id?.id ?? id
   if (!resourceId) {
-    throw new Error('Invalid resourceId')
+    throw new Error('无效的资料编号')
   }
 
   try {
@@ -345,3 +347,10 @@ export const adminDeleteAnnouncement = (id) => request.delete(`/admin/announceme
 
 
 
+
+export const getAdminCourseOrders = async (params) =>
+  normalizePage(await request.get('/admin/course/order/list', { params }), normalizeCourseOrder)
+export const adminPayCourseOrder = async (orderId) =>
+  normalizeCourseOrder(await request.post('/admin/course/order/' + orderId + '/pay'))
+export const adminCompleteCourseOrder = async (orderId) =>
+  normalizeCourseOrder(await request.post('/admin/course/order/' + orderId + '/complete'))
