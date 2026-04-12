@@ -31,6 +31,8 @@ public class User {
 
     private Integer points;
 
+    private Integer virtualBalance;
+
     private Integer role;
 
     private Integer status;

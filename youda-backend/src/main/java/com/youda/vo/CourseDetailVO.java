@@ -2,6 +2,7 @@ package com.youda.vo;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -30,6 +31,18 @@ public class CourseDetailVO {
     private Boolean purchased;
 
     private Boolean canLearn;
+
+    private Long orderId;
+
+    private String orderNo;
+
+    private Integer orderStatus;
+
+    private String orderStatusLabel;
+
+    private LocalDateTime orderDeliverTime;
+
+    private LocalDateTime orderReceiveTime;
 
     private List<ChapterVO> chapters;
 

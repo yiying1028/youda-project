@@ -1,4 +1,4 @@
-﻿import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 
 const routes = [
   {
@@ -112,6 +112,12 @@ const routes = [
         name: 'MyFavorites',
         component: () => import('@/views/user/MyFavoritesView.vue'),
         meta: { title: '我的收藏 - 优答', requiresAuth: true }
+      },
+      {
+        path: 'user/course-orders',
+        name: 'MyCourseOrders',
+        component: () => import('@/views/user/MyCourseOrdersView.vue'),
+        meta: { title: '我的课程订单 - 优答', requiresAuth: true }
       }
     ]
   },
@@ -213,3 +219,4 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
+

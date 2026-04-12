@@ -59,6 +59,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         user.setRole(0);
         user.setStatus(1);
         user.setPoints(0);
+        user.setVirtualBalance(0);
 
         this.save(user);
         return user.getId();
@@ -173,6 +174,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         userVO.setPhone(user.getPhone());
         userVO.setBio(user.getBio());
         userVO.setPoints(user.getPoints());
+        userVO.setVirtualBalance(user.getVirtualBalance());
         userVO.setRole(user.getRole());
         userVO.setCreateTime(user.getCreateTime());
         return userVO;

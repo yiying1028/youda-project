@@ -6,6 +6,7 @@ import com.youda.dto.ProgressUpdateDTO;
 import com.youda.entity.Course;
 import com.youda.vo.CourseDetailVO;
 import com.youda.vo.CourseListVO;
+import com.youda.vo.CourseOrderVO;
 import com.youda.vo.VideoPlayVO;
 
 import java.util.List;
@@ -18,6 +19,10 @@ public interface CourseService extends IService<Course> {
     CourseDetailVO getCourseDetail(Long courseId);
 
     Map<String, Object> purchaseCourse(Long courseId);
+
+    List<CourseOrderVO> getMyCourseOrders();
+
+    Map<String, Object> confirmCourseOrderReceived(Long orderId);
 
     VideoPlayVO getVideoPlayInfo(Long videoId);
 

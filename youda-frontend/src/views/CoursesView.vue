@@ -1,9 +1,9 @@
-<template>
+﻿<template>
   <div class="courses-page">
     <div class="courses-inner">
       <div class="page-header">
         <h1 class="page-title">课程中心</h1>
-        <p class="page-desc">免费课与积分课一起展示，先看介绍，再按需解锁学习。</p>
+        <p class="page-desc">免费课程与虚拟币课程统一展示。虚拟币课程购买后会生成订单，确认收货后才会解锁学习。</p>
       </div>
 
       <a-card :bordered="false" class="filter-card">
@@ -61,7 +61,7 @@
             v-for="course in courses"
             :key="course.id"
             class="course-card"
-            @click="$router.push('/course/' + course.id)"
+            @click="router.push('/course/' + course.id)"
           >
             <div class="course-cover-wrap">
               <img
@@ -72,8 +72,8 @@
               />
               <div class="course-price" :class="{ paid: course.requiresPoints }">
                 <template v-if="course.requiresPoints">
-                  {{ course.pointsCost }} 积分
-                  <span v-if="course.purchased" class="status-tag">已购</span>
+                  {{ course.pointsCost }} 虚拟币
+                  <span v-if="course.purchased" class="status-tag">{{ course.canLearn ? '已收货' : '待收货' }}</span>
                 </template>
                 <template v-else>免费</template>
               </div>
@@ -88,7 +88,7 @@
               </div>
               <div class="course-footer">
                 <span><user-outlined /> {{ course.teacherName || '优答教师' }}</span>
-                <span>{{ course.learnCount || 0 }} 人在学</span>
+                <span>{{ course.learnCount || 0 }} 人学习</span>
               </div>
             </div>
           </div>
@@ -111,9 +111,11 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { InboxOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { getCourseList, getGradeList, getSubjectList } from '@/api/index.js'
 
+const router = useRouter()
 const courses = ref([])
 const loading = ref(false)
 const total = ref(0)

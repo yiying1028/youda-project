@@ -1,4 +1,4 @@
-package com.youda.service.impl;
+﻿package com.youda.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -13,6 +13,7 @@ import com.youda.entity.CourseVideo;
 import com.youda.entity.Grade;
 import com.youda.entity.LearningProgress;
 import com.youda.entity.Subject;
+import com.youda.entity.User;
 import com.youda.mapper.CourseChapterMapper;
 import com.youda.mapper.CourseMapper;
 import com.youda.mapper.CoursePurchaseMapper;
@@ -20,12 +21,14 @@ import com.youda.mapper.CourseVideoMapper;
 import com.youda.mapper.GradeMapper;
 import com.youda.mapper.LearningProgressMapper;
 import com.youda.mapper.SubjectMapper;
+import com.youda.mapper.UserMapper;
 import com.youda.service.CourseService;
 import com.youda.service.PointsService;
 import com.youda.utils.UserContext;
 import com.youda.vo.ChapterVO;
 import com.youda.vo.CourseDetailVO;
 import com.youda.vo.CourseListVO;
+import com.youda.vo.CourseOrderVO;
 import com.youda.vo.ProgressVO;
 import com.youda.vo.VideoPlayVO;
 import com.youda.vo.VideoVO;
@@ -33,16 +36,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> implements CourseService {
-
-    private static final String ACTION_COURSE_PURCHASE = "COURSE_PURCHASE";
 
     @Autowired
     private CourseChapterMapper chapterMapper;
@@ -61,6 +65,9 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
 
     @Autowired
     private CoursePurchaseMapper coursePurchaseMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Autowired
     private PointsService pointsService;
@@ -100,9 +107,19 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         }
 
         Long currentUserId = UserContext.getCurrentUserIdOrNull();
-        boolean purchased = currentUserId != null && hasCoursePurchase(currentUserId, courseId);
+        CoursePurchase order = currentUserId == null ? null : getLatestCourseOrder(currentUserId, courseId);
+        boolean purchased = order != null;
+        boolean canLearn = !isPaidCourse(course) || isOrderReceived(order);
         vo.setPurchased(purchased);
-        vo.setCanLearn(!isPaidCourse(course) || purchased);
+        vo.setCanLearn(canLearn);
+        if (order != null) {
+            vo.setOrderId(order.getId());
+            vo.setOrderNo(order.getOrderNo());
+            vo.setOrderStatus(order.getStatus());
+            vo.setOrderStatusLabel(toOrderStatusLabel(order.getStatus()));
+            vo.setOrderDeliverTime(order.getDeliverTime());
+            vo.setOrderReceiveTime(order.getReceiveTime());
+        }
 
         List<CourseChapter> chapters = chapterMapper.selectList(
                 new LambdaQueryWrapper<CourseChapter>()
@@ -170,22 +187,101 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         if (!isPaidCourse(course)) {
             throw new BusinessException(400, "免费课程无需购买");
         }
-        if (hasCoursePurchase(userId, courseId)) {
-            throw new BusinessException(400, "该课程已购买");
+
+        CoursePurchase existingOrder = getLatestCourseOrder(userId, courseId);
+        if (existingOrder != null) {
+            throw new BusinessException(400, "该课程已经购买过");
         }
 
         int cost = normalizeCost(course.getPointsCost());
-        pointsService.spendPoints(userId, ACTION_COURSE_PURCHASE, String.valueOf(courseId), cost, "购买课程：" + course.getName());
+        int remainBalance = spendVirtualBalance(userId, cost);
 
+        LocalDateTime now = LocalDateTime.now();
         CoursePurchase purchase = new CoursePurchase();
+        purchase.setOrderNo(generateOrderNo(userId));
         purchase.setUserId(userId);
         purchase.setCourseId(courseId);
         purchase.setPointsCost(cost);
+        purchase.setStatus(CoursePurchase.STATUS_DELIVERED);
+        purchase.setDeliverTime(now);
         coursePurchaseMapper.insert(purchase);
 
         Map<String, Object> result = new HashMap<>();
+        result.put("orderId", purchase.getId());
+        result.put("orderNo", purchase.getOrderNo());
+        result.put("orderStatus", purchase.getStatus());
+        result.put("orderStatusLabel", toOrderStatusLabel(purchase.getStatus()));
         result.put("courseId", courseId);
         result.put("pointsCost", cost);
+        result.put("virtualBalance", remainBalance);
+        result.put("deliverTime", purchase.getDeliverTime());
+        return result;
+    }
+
+    @Override
+    public List<CourseOrderVO> getMyCourseOrders() {
+        Long userId = UserContext.getCurrentUserId();
+        List<CoursePurchase> orders = coursePurchaseMapper.selectList(
+                new LambdaQueryWrapper<CoursePurchase>()
+                        .eq(CoursePurchase::getUserId, userId)
+                        .orderByDesc(CoursePurchase::getCreateTime)
+                        .orderByDesc(CoursePurchase::getId)
+        );
+
+        List<CourseOrderVO> result = new ArrayList<>();
+        for (CoursePurchase order : orders) {
+            Course course = this.getById(order.getCourseId());
+            if (course == null) {
+                continue;
+            }
+            CourseOrderVO item = new CourseOrderVO();
+            item.setOrderId(order.getId());
+            item.setOrderNo(order.getOrderNo());
+            item.setOrderStatus(order.getStatus());
+            item.setOrderStatusLabel(toOrderStatusLabel(order.getStatus()));
+            item.setCourseId(course.getId());
+            item.setCourseName(course.getName());
+            item.setCourseCoverImage(course.getCoverImage());
+            item.setPointsCost(order.getPointsCost());
+            item.setCreateTime(order.getCreateTime());
+            item.setDeliverTime(order.getDeliverTime());
+            item.setReceiveTime(order.getReceiveTime());
+            item.setCanLearn(isOrderReceived(order));
+            result.add(item);
+        }
+
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> confirmCourseOrderReceived(Long orderId) {
+        Long userId = UserContext.getCurrentUserId();
+        CoursePurchase order = coursePurchaseMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException(404, "课程订单不存在");
+        }
+        if (!userId.equals(order.getUserId())) {
+            throw new BusinessException(403, "无权操作该订单");
+        }
+
+        if (!isOrderReceived(order)) {
+            CoursePurchase update = new CoursePurchase();
+            update.setId(order.getId());
+            update.setStatus(CoursePurchase.STATUS_RECEIVED);
+            update.setReceiveTime(LocalDateTime.now());
+            coursePurchaseMapper.updateById(update);
+            order.setStatus(CoursePurchase.STATUS_RECEIVED);
+            order.setReceiveTime(update.getReceiveTime());
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("orderId", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("orderStatus", order.getStatus());
+        result.put("orderStatusLabel", toOrderStatusLabel(order.getStatus()));
+        result.put("receiveTime", order.getReceiveTime());
+        result.put("canLearn", true);
         return result;
     }
 
@@ -331,11 +427,13 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
 
     private void fillCourseAccessState(CourseListVO item, Long currentUserId) {
         boolean requiresPoints = Boolean.TRUE.equals(item.getRequiresPoints()) && normalizeCost(item.getPointsCost()) > 0;
-        boolean purchased = requiresPoints && currentUserId != null && hasCoursePurchase(currentUserId, item.getCourseId());
+        CoursePurchase order = requiresPoints && currentUserId != null ? getLatestCourseOrder(currentUserId, item.getCourseId()) : null;
+        boolean purchased = order != null;
+        boolean canLearn = !requiresPoints || isOrderReceived(order);
         item.setRequiresPoints(requiresPoints);
         item.setPointsCost(requiresPoints ? normalizeCost(item.getPointsCost()) : 0);
         item.setPurchased(purchased);
-        item.setCanLearn(!requiresPoints || purchased);
+        item.setCanLearn(canLearn);
     }
 
     private void ensureCourseAccessible(Long userId, Long courseId) {
@@ -343,17 +441,29 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         if (!isPaidCourse(course)) {
             return;
         }
-        if (!hasCoursePurchase(userId, courseId)) {
-            throw new BusinessException(400, "请先购买该课程后再学习");
+        if (!hasReceivedCourseOrder(userId, courseId)) {
+            throw new BusinessException(400, "请先确认收货后再学习该课程");
         }
     }
 
-    private boolean hasCoursePurchase(Long userId, Long courseId) {
-        return coursePurchaseMapper.selectCount(
+    private CoursePurchase getLatestCourseOrder(Long userId, Long courseId) {
+        return coursePurchaseMapper.selectOne(
                 new LambdaQueryWrapper<CoursePurchase>()
                         .eq(CoursePurchase::getUserId, userId)
                         .eq(CoursePurchase::getCourseId, courseId)
-        ) > 0;
+                        .orderByDesc(CoursePurchase::getCreateTime)
+                        .orderByDesc(CoursePurchase::getId)
+                        .last("LIMIT 1")
+        );
+    }
+
+    private boolean hasReceivedCourseOrder(Long userId, Long courseId) {
+        CoursePurchase order = getLatestCourseOrder(userId, courseId);
+        return isOrderReceived(order);
+    }
+
+    private boolean isOrderReceived(CoursePurchase order) {
+        return order != null && (order.getStatus() == null || order.getStatus() == CoursePurchase.STATUS_RECEIVED);
     }
 
     private boolean isPaidCourse(Course course) {
@@ -362,6 +472,23 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
 
     private int normalizeCost(Integer pointsCost) {
         return pointsCost == null || pointsCost < 0 ? 0 : pointsCost;
+    }
+
+    private int spendVirtualBalance(Long userId, int cost) {
+        if (cost <= 0) {
+            throw new BusinessException(400, "课程价格配置错误");
+        }
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(400, "用户不存在");
+        }
+        int currentBalance = user.getVirtualBalance() == null ? 0 : user.getVirtualBalance();
+        if (currentBalance < cost) {
+            throw new BusinessException(400, "虚拟币余额不足");
+        }
+        user.setVirtualBalance(currentBalance - cost);
+        userMapper.updateById(user);
+        return user.getVirtualBalance();
     }
 
     private Course requireCourse(Long courseId) {
@@ -394,5 +521,18 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
                         .in(LearningProgress::getVideoId, videoIds)
         );
         return completedCount == chapterVideos.size();
+    }
+
+    private String toOrderStatusLabel(Integer status) {
+        if (status != null && status == CoursePurchase.STATUS_RECEIVED) {
+            return "已收货";
+        }
+        return "已发货";
+    }
+
+    private String generateOrderNo(Long userId) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        int random = ThreadLocalRandom.current().nextInt(1000, 10000);
+        return "COURSE" + timestamp + userId + random;
     }
 }

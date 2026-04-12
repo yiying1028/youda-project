@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="user-center-page">
     <div class="user-center-inner">
       <div class="user-hero">
@@ -21,7 +21,7 @@
         <div class="hero-info">
           <div class="hero-name">{{ userStore.userInfo?.nickname || '用户' }}</div>
           <div class="hero-username">@{{ userStore.userInfo?.username }}</div>
-          <div class="hero-bio">{{ userStore.userInfo?.bio || '记录你的学习节奏，沉淀你的错题与成长。' }}</div>
+          <div class="hero-bio">{{ userStore.userInfo?.bio || '记录你的学习节奏、错题积累和成长轨迹。' }}</div>
           <div class="hero-actions">
             <router-link to="/notebook"><a-button size="small">我的错题本</a-button></router-link>
             <router-link to="/checkin"><a-button size="small">签到积分</a-button></router-link>
@@ -35,6 +35,11 @@
           <div class="stat-label">当前积分</div>
           <div class="stat-value">{{ pointsOverview.points || 0 }}</div>
           <div class="stat-sub">今日新增 {{ pointsOverview.todayEarnedPoints || 0 }} 分</div>
+        </a-card>
+        <a-card :bordered="false" class="stat-card accent-gold">
+          <div class="stat-label">虚拟币余额</div>
+          <div class="stat-value">{{ userStore.userInfo?.virtualBalance || 0 }}</div>
+          <div class="stat-sub">课程购买只扣虚拟币，不扣积分</div>
         </a-card>
         <a-card :bordered="false" class="stat-card accent-orange">
           <div class="stat-label">连续签到</div>
@@ -65,6 +70,10 @@
         <router-link to="/notebook/review" class="quick-card">
           <book-outlined />
           <span>错题复习</span>
+        </router-link>
+        <router-link to="/user/course-orders" class="quick-card">
+          <shopping-outlined />
+          <span>课程订单</span>
         </router-link>
         <router-link to="/checkin" class="quick-card">
           <calendar-outlined />
@@ -101,7 +110,7 @@
               <span>累计签到</span>
               <strong>{{ pointsOverview.totalCheckinDays || 0 }} 天</strong>
             </div>
-            <a-button type="primary" block style="margin-top: 12px" @click="$router.push('/checkin')">
+            <a-button type="primary" block style="margin-top: 12px" @click="router.push('/checkin')">
               去签到并查看积分
             </a-button>
           </a-card>
@@ -112,9 +121,9 @@
         <a-tab-pane key="profile" tab="基本资料">
           <a-card :bordered="false" class="tab-card">
             <a-form
+              ref="profileFormRef"
               :model="profileForm"
               :rules="profileRules"
-              ref="profileFormRef"
               layout="vertical"
               style="max-width: 520px"
               @finish="handleUpdateProfile"
@@ -128,7 +137,7 @@
               <a-form-item label="个人简介" name="bio">
                 <a-textarea
                   v-model:value="profileForm.bio"
-                  placeholder="介绍一下你的学习目标、擅长科目或最近计划"
+                  placeholder="介绍一下你的学习目标、擅长科目或近期计划"
                   :rows="4"
                   :maxlength="200"
                   show-count
@@ -144,9 +153,9 @@
         <a-tab-pane key="password" tab="修改密码">
           <a-card :bordered="false" class="tab-card">
             <a-form
+              ref="pwdFormRef"
               :model="pwdForm"
               :rules="pwdRules"
-              ref="pwdFormRef"
               layout="vertical"
               style="max-width: 520px"
               @finish="handleUpdatePassword"
@@ -155,7 +164,7 @@
                 <a-input-password v-model:value="pwdForm.oldPassword" placeholder="请输入当前密码" />
               </a-form-item>
               <a-form-item label="新密码" name="newPassword">
-                <a-input-password v-model:value="pwdForm.newPassword" placeholder="请输入新密码（6-20 位）" />
+                <a-input-password v-model:value="pwdForm.newPassword" placeholder="请输入 6-20 位新密码" />
               </a-form-item>
               <a-form-item label="确认新密码" name="confirmPassword">
                 <a-input-password v-model:value="pwdForm.confirmPassword" placeholder="请再次输入新密码" />
@@ -173,6 +182,7 @@
 
 <script setup>
 import { reactive, ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.js'
 import {
   getLearningRecords,
@@ -189,9 +199,11 @@ import {
   CalendarOutlined,
   CameraOutlined,
   FileTextOutlined,
+  ShoppingOutlined,
   StarOutlined
 } from '@ant-design/icons-vue'
 
+const router = useRouter()
 const userStore = useUserStore()
 const activeTab = ref('profile')
 const profileFormRef = ref()
@@ -223,7 +235,7 @@ const pwdRules = {
   oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, max: 20, message: '密码长度为 6-20 位', trigger: 'blur' }
+    { min: 6, max: 20, message: '密码长度需要在 6-20 位之间', trigger: 'blur' }
   ],
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
@@ -318,16 +330,17 @@ onMounted(() => {
 .hero-username, .hero-bio { color: rgba(255, 255, 255, 0.82); }
 .hero-bio { margin: 8px 0 14px; }
 .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 16px; }
 .stat-card { border-radius: 16px; }
 .stat-label { color: #8c8c8c; font-size: 13px; }
 .stat-value { font-size: 30px; font-weight: 700; margin: 8px 0; }
-.stat-sub { color: #595959; font-size: 13px; }
+.stat-sub { color: #595959; font-size: 13px; line-height: 1.5; }
 .accent-blue { background: linear-gradient(180deg, #f6faff, #ffffff); }
+.accent-gold { background: linear-gradient(180deg, #fff7e6, #ffffff); }
 .accent-orange { background: linear-gradient(180deg, #fff8ef, #ffffff); }
 .accent-green { background: linear-gradient(180deg, #f3fff8, #ffffff); }
 .accent-purple { background: linear-gradient(180deg, #f7f5ff, #ffffff); }
-.quick-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.quick-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
 .quick-card { background: #fff; border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 10px; color: #262626; text-decoration: none; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06); }
 .record-row { margin-bottom: 16px; }
 .panel-card, .tab-card { border-radius: 16px; box-shadow: 0 1px 8px rgba(0, 0, 0, 0.05); }
@@ -336,6 +349,6 @@ onMounted(() => {
 .record-title { font-weight: 600; margin-bottom: 4px; }
 .record-time { color: #8c8c8c; font-size: 13px; }
 .user-tabs { margin-top: 8px; }
-@media (max-width: 960px) { .stats-grid, .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 960px) { .quick-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 768px) { .user-center-inner { padding: 16px; } .user-hero { flex-direction: column; align-items: flex-start; } }
 </style>

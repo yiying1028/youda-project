@@ -21,6 +21,8 @@ public class UserVO {
 
     private Integer points;
 
+    private Integer virtualBalance;
+
     private Integer role;
 
     private LocalDateTime createTime;

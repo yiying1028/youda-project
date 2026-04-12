@@ -107,6 +107,8 @@ const normalizeCourse = (course = {}) => {
   const chapters = Array.isArray(course.chapters) ? course.chapters.map(normalizeChapter) : []
   const derivedVideoCount = chapters.reduce((total, chapter) => total + (chapter.videos?.length || 0), 0)
   const requiresPoints = Boolean(course.requiresPoints)
+  const purchased = Boolean(course.purchased)
+  const canLearn = course.canLearn !== undefined ? Boolean(course.canLearn) : !requiresPoints
 
   return {
     ...course,
@@ -120,9 +122,39 @@ const normalizeCourse = (course = {}) => {
     videoCount: course.videoCount ?? (derivedVideoCount > 0 ? derivedVideoCount : (course.chapterCount ?? 0)),
     requiresPoints,
     pointsCost: course.pointsCost ?? 0,
-    purchased: Boolean(course.purchased),
-    canLearn: course.canLearn !== undefined ? Boolean(course.canLearn) : !requiresPoints,
+    purchased,
+    canLearn,
+    orderId: course.orderId ?? null,
+    orderNo: course.orderNo ?? '',
+    orderStatus: course.orderStatus ?? null,
+    orderStatusLabel: purchased ? (canLearn ? '已收货' : '已发货') : '',
+    orderDeliverTime: course.orderDeliverTime ?? course.deliverTime ?? null,
+    orderReceiveTime: course.orderReceiveTime ?? course.receiveTime ?? null,
+    pendingReceive: requiresPoints && purchased && !canLearn,
     chapters
+  }
+}
+
+const normalizeCourseOrder = (order = {}) => {
+  const orderId = order.orderId ?? order.id ?? null
+  const orderStatus = order.orderStatus ?? order.status ?? null
+  const canLearn = order.canLearn !== undefined ? Boolean(order.canLearn) : orderStatus === 2
+
+  return {
+    ...order,
+    id: orderId,
+    orderId,
+    orderNo: order.orderNo ?? '',
+    orderStatus,
+    orderStatusLabel: canLearn ? '已收货' : '已发货',
+    courseId: order.courseId ?? null,
+    courseName: order.courseName ?? '',
+    courseCoverImage: order.courseCoverImage ?? order.coverImage ?? '',
+    pointsCost: order.pointsCost ?? 0,
+    createTime: order.createTime ?? null,
+    deliverTime: order.deliverTime ?? null,
+    receiveTime: order.receiveTime ?? null,
+    canLearn
   }
 }
 
@@ -257,6 +289,9 @@ export const uploadChatImage = (formData) => request.post('/chat/upload-image', 
 export const getCourseList = async (params) => normalizePage(await request.get('/course/list', { params }), normalizeCourse)
 export const getCourseDetail = async (id) => normalizeCourse(await request.get(`/course/${id}`))
 export const purchaseCourse = (id) => request.post(`/course/${id}/purchase`)
+export const getMyCourseOrders = async () => normalizePage(await request.get('/course/order/my'), normalizeCourseOrder)
+export const confirmCourseOrderReceived = async (orderId) =>
+  normalizeCourseOrder(await request.post(`/course/order/${orderId}/receive`))
 export const getVideoInfo = async (id) => normalizeVideoPlay(await request.get(`/course/video/${id}`))
 export const updateVideoProgress = (id, data) => request.post(`/course/video/${id}/progress`, data)
 export const getLearningRecords = () => request.get('/course/learning-records')
@@ -297,4 +332,6 @@ export const getAdminAnnouncementList = (params) => request.get('/admin/announce
 export const adminAddAnnouncement = (data) => request.post('/admin/announcement', data)
 export const adminUpdateAnnouncement = (id, data) => request.put(`/admin/announcement/${id}`, data)
 export const adminDeleteAnnouncement = (id) => request.delete(`/admin/announcement/${id}`)
+
+
 

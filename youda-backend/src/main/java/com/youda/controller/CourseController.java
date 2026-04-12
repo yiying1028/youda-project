@@ -6,6 +6,7 @@ import com.youda.dto.ProgressUpdateDTO;
 import com.youda.service.CourseService;
 import com.youda.vo.CourseDetailVO;
 import com.youda.vo.CourseListVO;
+import com.youda.vo.CourseOrderVO;
 import com.youda.vo.VideoPlayVO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -44,7 +45,17 @@ public class CourseController {
 
     @PostMapping("/{courseId}/purchase")
     public Result<Map<String, Object>> purchaseCourse(@PathVariable Long courseId) {
-        return Result.success("购买成功", courseService.purchaseCourse(courseId));
+        return Result.success("Purchase successful", courseService.purchaseCourse(courseId));
+    }
+
+    @GetMapping("/order/my")
+    public Result<List<CourseOrderVO>> getMyCourseOrders() {
+        return Result.success(courseService.getMyCourseOrders());
+    }
+
+    @PostMapping("/order/{orderId}/receive")
+    public Result<Map<String, Object>> confirmCourseOrderReceived(@PathVariable Long orderId) {
+        return Result.success("Receive confirmed", courseService.confirmCourseOrderReceived(orderId));
     }
 
     @GetMapping("/video/{videoId}")
@@ -56,7 +67,7 @@ public class CourseController {
     public Result<Map<String, Object>> updateProgress(
             @PathVariable Long videoId,
             @Valid @RequestBody ProgressUpdateDTO dto) {
-        return Result.success("更新成功", courseService.updateProgress(videoId, dto));
+        return Result.success("Update successful", courseService.updateProgress(videoId, dto));
     }
 
     @GetMapping("/learning-records")
