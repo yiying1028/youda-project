@@ -1,4 +1,4 @@
-﻿import axios from 'axios'
+import axios from 'axios'
 import request from '@/utils/request.js'
 
 const normalizeChatId = (value, seen = new WeakSet()) => {
@@ -106,9 +106,11 @@ const normalizeChapter = (chapter = {}) => ({
 const normalizeCourse = (course = {}) => {
   const chapters = Array.isArray(course.chapters) ? course.chapters.map(normalizeChapter) : []
   const derivedVideoCount = chapters.reduce((total, chapter) => total + (chapter.videos?.length || 0), 0)
-  const requiresPoints = Boolean(course.requiresPoints)
+  const requiresPurchase = Boolean(course.requiresPurchase ?? (Number(course.priceAmount ?? 0) > 0))
+  const hasOrder = Boolean(course.hasOrder ?? course.orderId)
   const purchased = Boolean(course.purchased)
-  const canLearn = course.canLearn !== undefined ? Boolean(course.canLearn) : !requiresPoints
+  const canLearn = course.canLearn !== undefined ? Boolean(course.canLearn) : (!requiresPurchase || purchased)
+  const orderStatus = course.orderStatus ?? null
 
   return {
     ...course,
@@ -120,17 +122,20 @@ const normalizeCourse = (course = {}) => {
     studentCount: course.studentCount ?? course.learnCount ?? 0,
     chapterCount: course.chapterCount ?? chapters.length,
     videoCount: course.videoCount ?? (derivedVideoCount > 0 ? derivedVideoCount : (course.chapterCount ?? 0)),
-    requiresPoints,
-    pointsCost: course.pointsCost ?? 0,
+    requiresPurchase,
+    priceAmount: Number(course.priceAmount ?? 0),
+    hasOrder,
     purchased,
     canLearn,
     orderId: course.orderId ?? null,
     orderNo: course.orderNo ?? '',
-    orderStatus: course.orderStatus ?? null,
-    orderStatusLabel: purchased ? (canLearn ? '已收货' : '已发货') : '',
-    orderDeliverTime: course.orderDeliverTime ?? course.deliverTime ?? null,
-    orderReceiveTime: course.orderReceiveTime ?? course.receiveTime ?? null,
-    pendingReceive: requiresPoints && purchased && !canLearn,
+    orderStatus,
+    orderStatusLabel: course.orderStatusLabel ?? '',
+    orderCreateTime: course.orderCreateTime ?? course.createTime ?? null,
+    orderPaidTime: course.orderPaidTime ?? course.paidTime ?? null,
+    orderCompletedTime: course.orderCompletedTime ?? course.completedTime ?? null,
+    canPay: requiresPurchase && hasOrder && orderStatus === 0,
+    canComplete: requiresPurchase && orderStatus === 1,
     chapters
   }
 }
@@ -138,7 +143,8 @@ const normalizeCourse = (course = {}) => {
 const normalizeCourseOrder = (order = {}) => {
   const orderId = order.orderId ?? order.id ?? null
   const orderStatus = order.orderStatus ?? order.status ?? null
-  const canLearn = order.canLearn !== undefined ? Boolean(order.canLearn) : orderStatus === 2
+  const canPay = order.canPay !== undefined ? Boolean(order.canPay) : orderStatus === 0
+  const canLearn = order.canLearn !== undefined ? Boolean(order.canLearn) : [1, 2].includes(orderStatus)
 
   return {
     ...order,
@@ -146,15 +152,17 @@ const normalizeCourseOrder = (order = {}) => {
     orderId,
     orderNo: order.orderNo ?? '',
     orderStatus,
-    orderStatusLabel: canLearn ? '已收货' : '已发货',
+    orderStatusLabel: order.orderStatusLabel ?? '',
     courseId: order.courseId ?? null,
     courseName: order.courseName ?? '',
     courseCoverImage: order.courseCoverImage ?? order.coverImage ?? '',
-    pointsCost: order.pointsCost ?? 0,
+    paymentAmount: Number(order.paymentAmount ?? 0),
     createTime: order.createTime ?? null,
-    deliverTime: order.deliverTime ?? null,
-    receiveTime: order.receiveTime ?? null,
-    canLearn
+    paidTime: order.paidTime ?? null,
+    completedTime: order.completedTime ?? null,
+    canPay,
+    canLearn,
+    canComplete: orderStatus === 1
   }
 }
 
@@ -290,8 +298,10 @@ export const getCourseList = async (params) => normalizePage(await request.get('
 export const getCourseDetail = async (id) => normalizeCourse(await request.get(`/course/${id}`))
 export const purchaseCourse = (id) => request.post(`/course/${id}/purchase`)
 export const getMyCourseOrders = async () => normalizePage(await request.get('/course/order/my'), normalizeCourseOrder)
-export const confirmCourseOrderReceived = async (orderId) =>
-  normalizeCourseOrder(await request.post(`/course/order/${orderId}/receive`))
+export const payCourseOrder = async (orderId) =>
+  normalizeCourseOrder(await request.post(`/course/order/${orderId}/pay`))
+export const completeCourseOrder = async (orderId) =>
+  normalizeCourseOrder(await request.post(`/course/order/${orderId}/complete`))
 export const getVideoInfo = async (id) => normalizeVideoPlay(await request.get(`/course/video/${id}`))
 export const updateVideoProgress = (id, data) => request.post(`/course/video/${id}/progress`, data)
 export const getLearningRecords = () => request.get('/course/learning-records')

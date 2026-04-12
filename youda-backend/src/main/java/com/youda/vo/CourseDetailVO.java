@@ -2,6 +2,7 @@ package com.youda.vo;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,9 +25,11 @@ public class CourseDetailVO {
 
     private Integer studentCount;
 
-    private Boolean requiresPoints;
+    private Boolean requiresPurchase;
 
-    private Integer pointsCost;
+    private BigDecimal priceAmount;
+
+    private Boolean hasOrder;
 
     private Boolean purchased;
 
@@ -40,9 +43,11 @@ public class CourseDetailVO {
 
     private String orderStatusLabel;
 
-    private LocalDateTime orderDeliverTime;
+    private LocalDateTime orderCreateTime;
 
-    private LocalDateTime orderReceiveTime;
+    private LocalDateTime orderPaidTime;
+
+    private LocalDateTime orderCompletedTime;
 
     private List<ChapterVO> chapters;
 

@@ -13,7 +13,6 @@ import com.youda.entity.CourseVideo;
 import com.youda.entity.Grade;
 import com.youda.entity.LearningProgress;
 import com.youda.entity.Subject;
-import com.youda.entity.User;
 import com.youda.mapper.CourseChapterMapper;
 import com.youda.mapper.CourseMapper;
 import com.youda.mapper.CoursePurchaseMapper;
@@ -21,7 +20,6 @@ import com.youda.mapper.CourseVideoMapper;
 import com.youda.mapper.GradeMapper;
 import com.youda.mapper.LearningProgressMapper;
 import com.youda.mapper.SubjectMapper;
-import com.youda.mapper.UserMapper;
 import com.youda.service.CourseService;
 import com.youda.service.PointsService;
 import com.youda.utils.UserContext;
@@ -36,6 +34,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -67,9 +67,6 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     private CoursePurchaseMapper coursePurchaseMapper;
 
     @Autowired
-    private UserMapper userMapper;
-
-    @Autowired
     private PointsService pointsService;
 
     @Override
@@ -93,8 +90,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         vo.setCoverImage(course.getCoverImage());
         vo.setTeacherName(course.getTeacherName());
         vo.setStudentCount(course.getStudentCount());
-        vo.setRequiresPoints(isPaidCourse(course));
-        vo.setPointsCost(isPaidCourse(course) ? normalizeCost(course.getPointsCost()) : 0);
+        vo.setRequiresPurchase(isPaidCourse(course));
+        vo.setPriceAmount(normalizePrice(course.getPriceAmount()));
 
         Subject subject = subjectMapper.selectById(course.getSubjectId());
         if (subject != null) {
@@ -108,8 +105,11 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
 
         Long currentUserId = UserContext.getCurrentUserIdOrNull();
         CoursePurchase order = currentUserId == null ? null : getLatestCourseOrder(currentUserId, courseId);
-        boolean purchased = order != null;
-        boolean canLearn = !isPaidCourse(course) || isOrderReceived(order);
+        boolean hasOrder = order != null;
+        boolean purchased = isOrderPaid(order);
+        boolean canLearn = !isPaidCourse(course) || purchased;
+
+        vo.setHasOrder(hasOrder);
         vo.setPurchased(purchased);
         vo.setCanLearn(canLearn);
         if (order != null) {
@@ -117,8 +117,9 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             vo.setOrderNo(order.getOrderNo());
             vo.setOrderStatus(order.getStatus());
             vo.setOrderStatusLabel(toOrderStatusLabel(order.getStatus()));
-            vo.setOrderDeliverTime(order.getDeliverTime());
-            vo.setOrderReceiveTime(order.getReceiveTime());
+            vo.setOrderCreateTime(order.getCreateTime());
+            vo.setOrderPaidTime(order.getPaidTime());
+            vo.setOrderCompletedTime(order.getCompletedTime());
         }
 
         List<CourseChapter> chapters = chapterMapper.selectList(
@@ -185,37 +186,27 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         Long userId = UserContext.getCurrentUserId();
         Course course = requireCourse(courseId);
         if (!isPaidCourse(course)) {
-            throw new BusinessException(400, "免费课程无需购买");
+            throw new BusinessException(400, "Free course does not require an order");
         }
 
         CoursePurchase existingOrder = getLatestCourseOrder(userId, courseId);
         if (existingOrder != null) {
-            throw new BusinessException(400, "该课程已经购买过");
+            if (isOrderPendingPayment(existingOrder)) {
+                throw new BusinessException(400, "A pending payment order already exists for this course");
+            }
+            throw new BusinessException(400, "This course has already been purchased");
         }
 
-        int cost = normalizeCost(course.getPointsCost());
-        int remainBalance = spendVirtualBalance(userId, cost);
+        CoursePurchase order = new CoursePurchase();
+        order.setOrderNo(generateOrderNo(userId));
+        order.setUserId(userId);
+        order.setCourseId(courseId);
+        order.setPaymentAmount(normalizePrice(course.getPriceAmount()));
+        order.setPointsCost(normalizePrice(course.getPriceAmount()).intValue());
+        order.setStatus(CoursePurchase.STATUS_PENDING_PAYMENT);
+        coursePurchaseMapper.insert(order);
 
-        LocalDateTime now = LocalDateTime.now();
-        CoursePurchase purchase = new CoursePurchase();
-        purchase.setOrderNo(generateOrderNo(userId));
-        purchase.setUserId(userId);
-        purchase.setCourseId(courseId);
-        purchase.setPointsCost(cost);
-        purchase.setStatus(CoursePurchase.STATUS_DELIVERED);
-        purchase.setDeliverTime(now);
-        coursePurchaseMapper.insert(purchase);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("orderId", purchase.getId());
-        result.put("orderNo", purchase.getOrderNo());
-        result.put("orderStatus", purchase.getStatus());
-        result.put("orderStatusLabel", toOrderStatusLabel(purchase.getStatus()));
-        result.put("courseId", courseId);
-        result.put("pointsCost", cost);
-        result.put("virtualBalance", remainBalance);
-        result.put("deliverTime", purchase.getDeliverTime());
-        return result;
+        return buildOrderResult(order, false);
     }
 
     @Override
@@ -234,6 +225,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             if (course == null) {
                 continue;
             }
+
             CourseOrderVO item = new CourseOrderVO();
             item.setOrderId(order.getId());
             item.setOrderNo(order.getOrderNo());
@@ -242,47 +234,59 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
             item.setCourseId(course.getId());
             item.setCourseName(course.getName());
             item.setCourseCoverImage(course.getCoverImage());
-            item.setPointsCost(order.getPointsCost());
+            item.setPaymentAmount(normalizePrice(order.getPaymentAmount()));
             item.setCreateTime(order.getCreateTime());
-            item.setDeliverTime(order.getDeliverTime());
-            item.setReceiveTime(order.getReceiveTime());
-            item.setCanLearn(isOrderReceived(order));
+            item.setPaidTime(order.getPaidTime());
+            item.setCompletedTime(order.getCompletedTime());
+            item.setCanPay(isOrderPendingPayment(order));
+            item.setCanLearn(isOrderPaid(order));
             result.add(item);
         }
-
         return result;
     }
 
     @Override
     @Transactional
-    public Map<String, Object> confirmCourseOrderReceived(Long orderId) {
+    public Map<String, Object> payCourseOrder(Long orderId) {
         Long userId = UserContext.getCurrentUserId();
-        CoursePurchase order = coursePurchaseMapper.selectById(orderId);
-        if (order == null) {
-            throw new BusinessException(404, "课程订单不存在");
-        }
-        if (!userId.equals(order.getUserId())) {
-            throw new BusinessException(403, "无权操作该订单");
+        CoursePurchase order = requireOwnedOrder(userId, orderId);
+
+        if (!isOrderPendingPayment(order)) {
+            throw new BusinessException(400, "The current order status cannot be paid");
         }
 
-        if (!isOrderReceived(order)) {
+        CoursePurchase update = new CoursePurchase();
+        update.setId(order.getId());
+        update.setStatus(CoursePurchase.STATUS_PAID);
+        update.setPaidTime(LocalDateTime.now());
+        coursePurchaseMapper.updateById(update);
+
+        order.setStatus(update.getStatus());
+        order.setPaidTime(update.getPaidTime());
+        return buildOrderResult(order, true);
+    }
+
+    @Override
+    @Transactional
+    public Map<String, Object> completeCourseOrder(Long orderId) {
+        Long userId = UserContext.getCurrentUserId();
+        CoursePurchase order = requireOwnedOrder(userId, orderId);
+
+        if (isOrderPendingPayment(order)) {
+            throw new BusinessException(400, "Please complete payment before completing the order");
+        }
+
+        if (order.getStatus() == null || order.getStatus() != CoursePurchase.STATUS_COMPLETED) {
             CoursePurchase update = new CoursePurchase();
             update.setId(order.getId());
-            update.setStatus(CoursePurchase.STATUS_RECEIVED);
-            update.setReceiveTime(LocalDateTime.now());
+            update.setStatus(CoursePurchase.STATUS_COMPLETED);
+            update.setCompletedTime(LocalDateTime.now());
             coursePurchaseMapper.updateById(update);
-            order.setStatus(CoursePurchase.STATUS_RECEIVED);
-            order.setReceiveTime(update.getReceiveTime());
+            order.setStatus(update.getStatus());
+            order.setCompletedTime(update.getCompletedTime());
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("orderId", order.getId());
-        result.put("orderNo", order.getOrderNo());
-        result.put("orderStatus", order.getStatus());
-        result.put("orderStatusLabel", toOrderStatusLabel(order.getStatus()));
-        result.put("receiveTime", order.getReceiveTime());
-        result.put("canLearn", true);
-        return result;
+        return buildOrderResult(order, true);
     }
 
     @Override
@@ -290,7 +294,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         Long currentUserId = UserContext.getCurrentUserId();
         CourseVideo video = videoMapper.selectById(videoId);
         if (video == null) {
-            throw new BusinessException(400, "视频不存在");
+            throw new BusinessException(400, "Video not found");
         }
         ensureCourseAccessible(currentUserId, video.getCourseId());
 
@@ -330,7 +334,7 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         Long userId = UserContext.getCurrentUserId();
         CourseVideo video = videoMapper.selectById(videoId);
         if (video == null) {
-            throw new BusinessException(400, "视频不存在");
+            throw new BusinessException(400, "Video not found");
         }
         ensureCourseAccessible(userId, video.getCourseId());
 
@@ -426,14 +430,15 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     }
 
     private void fillCourseAccessState(CourseListVO item, Long currentUserId) {
-        boolean requiresPoints = Boolean.TRUE.equals(item.getRequiresPoints()) && normalizeCost(item.getPointsCost()) > 0;
-        CoursePurchase order = requiresPoints && currentUserId != null ? getLatestCourseOrder(currentUserId, item.getCourseId()) : null;
-        boolean purchased = order != null;
-        boolean canLearn = !requiresPoints || isOrderReceived(order);
-        item.setRequiresPoints(requiresPoints);
-        item.setPointsCost(requiresPoints ? normalizeCost(item.getPointsCost()) : 0);
+        CoursePurchase order = currentUserId != null ? getLatestCourseOrder(currentUserId, item.getCourseId()) : null;
+        boolean hasOrder = order != null;
+        boolean purchased = isOrderPaid(order);
+        boolean canLearn = !Boolean.TRUE.equals(item.getRequiresPurchase()) || purchased;
+        item.setHasOrder(hasOrder);
         item.setPurchased(purchased);
         item.setCanLearn(canLearn);
+        item.setOrderStatus(order != null ? order.getStatus() : null);
+        item.setOrderStatusLabel(order != null ? toOrderStatusLabel(order.getStatus()) : null);
     }
 
     private void ensureCourseAccessible(Long userId, Long courseId) {
@@ -441,8 +446,8 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         if (!isPaidCourse(course)) {
             return;
         }
-        if (!hasReceivedCourseOrder(userId, courseId)) {
-            throw new BusinessException(400, "请先确认收货后再学习该课程");
+        if (!hasPaidCourseOrder(userId, courseId)) {
+            throw new BusinessException(400, "Please complete the course order payment first");
         }
     }
 
@@ -457,46 +462,48 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
         );
     }
 
-    private boolean hasReceivedCourseOrder(Long userId, Long courseId) {
+    private boolean hasPaidCourseOrder(Long userId, Long courseId) {
         CoursePurchase order = getLatestCourseOrder(userId, courseId);
-        return isOrderReceived(order);
+        return isOrderPaid(order);
     }
 
-    private boolean isOrderReceived(CoursePurchase order) {
-        return order != null && (order.getStatus() == null || order.getStatus() == CoursePurchase.STATUS_RECEIVED);
+    private boolean isOrderPendingPayment(CoursePurchase order) {
+        return order != null && order.getStatus() != null && order.getStatus() == CoursePurchase.STATUS_PENDING_PAYMENT;
+    }
+
+    private boolean isOrderPaid(CoursePurchase order) {
+        return order != null && order.getStatus() != null
+                && (order.getStatus() == CoursePurchase.STATUS_PAID || order.getStatus() == CoursePurchase.STATUS_COMPLETED);
     }
 
     private boolean isPaidCourse(Course course) {
-        return course.getRequiresPoints() != null && course.getRequiresPoints() == 1 && normalizeCost(course.getPointsCost()) > 0;
+        return normalizePrice(course.getPriceAmount()).compareTo(BigDecimal.ZERO) > 0;
     }
 
-    private int normalizeCost(Integer pointsCost) {
-        return pointsCost == null || pointsCost < 0 ? 0 : pointsCost;
-    }
-
-    private int spendVirtualBalance(Long userId, int cost) {
-        if (cost <= 0) {
-            throw new BusinessException(400, "课程价格配置错误");
+    private BigDecimal normalizePrice(BigDecimal priceAmount) {
+        if (priceAmount == null || priceAmount.compareTo(BigDecimal.ZERO) < 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
-        User user = userMapper.selectById(userId);
-        if (user == null) {
-            throw new BusinessException(400, "用户不存在");
-        }
-        int currentBalance = user.getVirtualBalance() == null ? 0 : user.getVirtualBalance();
-        if (currentBalance < cost) {
-            throw new BusinessException(400, "虚拟币余额不足");
-        }
-        user.setVirtualBalance(currentBalance - cost);
-        userMapper.updateById(user);
-        return user.getVirtualBalance();
+        return priceAmount.setScale(2, RoundingMode.HALF_UP);
     }
 
     private Course requireCourse(Long courseId) {
         Course course = this.getById(courseId);
         if (course == null) {
-            throw new BusinessException(400, "课程不存在");
+            throw new BusinessException(400, "Course not found");
         }
         return course;
+    }
+
+    private CoursePurchase requireOwnedOrder(Long userId, Long orderId) {
+        CoursePurchase order = coursePurchaseMapper.selectById(orderId);
+        if (order == null) {
+            throw new BusinessException(404, "Course order not found");
+        }
+        if (!userId.equals(order.getUserId())) {
+            throw new BusinessException(403, "No permission to operate this order");
+        }
+        return order;
     }
 
     private boolean isChapterCompleted(Long userId, Long chapterId) {
@@ -524,10 +531,35 @@ public class CourseServiceImpl extends ServiceImpl<CourseMapper, Course> impleme
     }
 
     private String toOrderStatusLabel(Integer status) {
-        if (status != null && status == CoursePurchase.STATUS_RECEIVED) {
-            return "已收货";
+        if (status == null) {
+            return "--";
         }
-        return "已发货";
+        if (status == CoursePurchase.STATUS_PENDING_PAYMENT) {
+            return "Pending Payment";
+        }
+        if (status == CoursePurchase.STATUS_PAID) {
+            return "Paid";
+        }
+        if (status == CoursePurchase.STATUS_COMPLETED) {
+            return "Completed";
+        }
+        return "--";
+    }
+
+    private Map<String, Object> buildOrderResult(CoursePurchase order, boolean canLearn) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("orderId", order.getId());
+        result.put("orderNo", order.getOrderNo());
+        result.put("orderStatus", order.getStatus());
+        result.put("orderStatusLabel", toOrderStatusLabel(order.getStatus()));
+        result.put("courseId", order.getCourseId());
+        result.put("paymentAmount", normalizePrice(order.getPaymentAmount()));
+        result.put("createTime", order.getCreateTime());
+        result.put("paidTime", order.getPaidTime());
+        result.put("completedTime", order.getCompletedTime());
+        result.put("canPay", isOrderPendingPayment(order));
+        result.put("canLearn", canLearn);
+        return result;
     }
 
     private String generateOrderNo(Long userId) {

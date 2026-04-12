@@ -11,8 +11,8 @@
             c.teacher_name as teacherName,
             c.chapter_count as chapterCount,
             c.student_count as studentCount,
-            c.requires_points as requiresPoints,
-            c.points_cost as pointsCost,
+            CASE WHEN c.price_amount IS NOT NULL AND c.price_amount > 0 THEN 1 ELSE 0 END as requiresPurchase,
+            c.price_amount as priceAmount,
             c.create_time as createTime,
             s.name as subjectName,
             g.name as gradeName

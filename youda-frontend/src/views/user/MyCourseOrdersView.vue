@@ -3,48 +3,35 @@
     <div class="course-orders-inner">
       <div class="page-header">
         <div>
-          <h1 class="page-title">我的课程订单</h1>
-          <p class="page-desc">课程购买后会先生成“已发货”订单，确认收货后才会正式解锁观看。</p>
+          <h1 class="page-title">课程订单</h1>
+          <p class="page-desc">在这里查看课程订单、完成支付，并管理课程学习权限。</p>
         </div>
-        <a-button @click="router.push('/user')">返回个人中心</a-button>
+        <a-button @click="router.push('/user')">返回用户中心</a-button>
       </div>
-
       <a-spin :spinning="loading">
-        <a-empty v-if="!loading && orders.length === 0" description="还没有课程订单" />
-
+        <a-empty v-if="!loading && orders.length === 0" description="暂无课程订单" />
         <div v-else class="order-list">
           <a-card v-for="order in orders" :key="order.orderId" :bordered="false" class="order-card">
             <div class="order-card__body">
-              <img
-                :src="order.courseCoverImage || '/course-cover-fallback.svg'"
-                :alt="order.courseName"
-                class="order-cover"
-                @error="handleCoverError"
-              />
-
+              <img :src="order.courseCoverImage || '/course-cover-fallback.svg'" :alt="order.courseName" class="order-cover" @error="handleCoverError" />
               <div class="order-main">
                 <div class="order-main__top">
                   <div>
                     <div class="course-name">{{ order.courseName }}</div>
                     <div class="order-no">订单号：{{ order.orderNo || `ORDER-${order.orderId}` }}</div>
                   </div>
-                  <a-tag :color="order.canLearn ? 'green' : 'gold'">{{ order.canLearn ? '已收货' : '已发货' }}</a-tag>
+                  <a-tag :color="statusColor(order.orderStatus)">{{ localStatusLabel(order) }}</a-tag>
                 </div>
-
                 <div class="order-meta">
-                  <span>虚拟币：{{ order.pointsCost }}</span>
-                  <span>创建时间：{{ formatTime(order.createTime) }}</span>
-                  <span>发货时间：{{ formatTime(order.deliverTime) }}</span>
-                  <span>收货时间：{{ formatTime(order.receiveTime) }}</span>
+                  <span>订单金额：{{ formatPrice(order.paymentAmount) }}</span>
+                  <span>下单时间：{{ formatTime(order.createTime) }}</span>
+                  <span>支付时间：{{ formatTime(order.paidTime) }}</span>
+                  <span>完成时间：{{ formatTime(order.completedTime) }}</span>
                 </div>
-
                 <div class="order-actions">
-                  <a-button v-if="!order.canLearn" type="primary" :loading="receivingId === order.orderId" @click="handleReceive(order)">
-                    确认收货
-                  </a-button>
-                  <a-button v-else type="primary" ghost @click="router.push(`/course/${order.courseId}`)">
-                    去学习
-                  </a-button>
+                  <a-button v-if="order.canPay" type="primary" :loading="payingId === order.orderId" @click="handlePay(order)">立即支付</a-button>
+                  <a-button v-if="order.canLearn" type="primary" ghost @click="router.push(`/course/${order.courseId}`)">去学习</a-button>
+                  <a-button v-if="order.canComplete" :loading="completingId === order.orderId" @click="handleComplete(order)">完成订单</a-button>
                   <a-button @click="router.push(`/course/${order.courseId}`)">查看课程</a-button>
                 </div>
               </div>
@@ -61,47 +48,21 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import dayjs from 'dayjs'
-import { confirmCourseOrderReceived, getMyCourseOrders } from '@/api/index.js'
-
+import { completeCourseOrder, getMyCourseOrders, payCourseOrder } from '@/api/index.js'
 const router = useRouter()
 const orders = ref([])
 const loading = ref(false)
-const receivingId = ref(null)
-
-function formatTime(time) {
-  return time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '--'
-}
-
-function handleCoverError(event) {
-  if (event?.target && !event.target.src.endsWith('/course-cover-fallback.svg')) {
-    event.target.src = '/course-cover-fallback.svg'
-  }
-}
-
-async function loadOrders() {
-  loading.value = true
-  try {
-    orders.value = await getMyCourseOrders()
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleReceive(order) {
-  if (!order?.orderId) return
-  receivingId.value = order.orderId
-  try {
-    const updated = await confirmCourseOrderReceived(order.orderId)
-    orders.value = orders.value.map((item) => (item.orderId === order.orderId ? { ...item, ...updated } : item))
-    message.success('确认收货成功，课程已解锁')
-  } finally {
-    receivingId.value = null
-  }
-}
-
-onMounted(() => {
-  loadOrders()
-})
+const payingId = ref(null)
+const completingId = ref(null)
+function formatTime(time) { return time ? dayjs(time).format('YYYY-MM-DD HH:mm') : '--' }
+function formatPrice(value) { return `￥${Number(value || 0).toFixed(2)}` }
+function statusColor(status) { if (status === 0) return 'orange'; if (status === 1) return 'blue'; if (status === 2) return 'green'; return 'default' }
+function localStatusLabel(order) { if (order.orderStatus === 0) return '待支付'; if (order.orderStatus === 1) return '已支付'; if (order.orderStatus === 2) return '已完成'; return order.orderStatusLabel || '--' }
+function handleCoverError(event) { if (event?.target && !event.target.src.endsWith('/course-cover-fallback.svg')) event.target.src = '/course-cover-fallback.svg' }
+async function loadOrders() { loading.value = true; try { orders.value = await getMyCourseOrders() } finally { loading.value = false } }
+async function handlePay(order) { if (!order?.orderId) return; payingId.value = order.orderId; try { const updated = await payCourseOrder(order.orderId); orders.value = orders.value.map((item) => item.orderId === order.orderId ? { ...item, ...updated } : item); message.success('支付成功') } finally { payingId.value = null } }
+async function handleComplete(order) { if (!order?.orderId) return; completingId.value = order.orderId; try { const updated = await completeCourseOrder(order.orderId); orders.value = orders.value.map((item) => item.orderId === order.orderId ? { ...item, ...updated } : item); message.success('订单已完成') } finally { completingId.value = null } }
+onMounted(() => { loadOrders() })
 </script>
 
 <style scoped>
@@ -119,11 +80,5 @@ onMounted(() => {
 .order-no { margin-top: 8px; color: #6b7280; word-break: break-all; }
 .order-meta { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 14px; color: #4b5563; font-size: 14px; }
 .order-actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
-@media (max-width: 768px) {
-  .course-orders-inner { padding: 16px; }
-  .page-header { flex-direction: column; }
-  .order-card__body { grid-template-columns: 1fr; }
-  .order-cover { height: 180px; }
-  .order-main__top { flex-direction: column; }
-}
+@media (max-width: 768px) { .course-orders-inner { padding: 16px; } .page-header { flex-direction: column; } .order-card__body { grid-template-columns: 1fr; } .order-cover { height: 180px; } .order-main__top { flex-direction: column; } }
 </style>

@@ -42,6 +42,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +92,7 @@ public class AdminController {
     private CourseService courseService;
 
     /**
-     * 鍚庡彴鎺ュ彛缁熶竴鏍￠獙绠＄悊鍛樿韩浠姐€?
+     * 闂傚倸鍊风粈渚€骞夐敓鐘冲殞闁绘劦鍓﹀▓鑺ユ叏濠靛棜顫﹀ù婊冪秺閺岀喓绱掗姀鐘崇亪缂備胶濮垫繛濠囧蓟閺囩喎绶為柛顐ｇ箓婵海绱撻崒姘毙ｉ柟绋垮⒔濡叉劙骞樼€涙ê顎撻梺鍛婄箓鐎氼參鎮楅搹鍦＝濞达綀顫夐埛鎰版煙缁嬪灝鏆辨い鏇稻缁傛帞鈧綆鍋呭▍銏ゆ⒑缂佹﹫鑰挎繛浣冲洦鍎楁俊銈呭暟绾捐棄霉閿濆懏鎯堟い搴㈡尵缁辨帗娼忛妸锔绢槹濡ょ姷鍋涢崯顖滄崲濠靛鐐婄憸宥囩玻濞戞ǚ鏀介柍钘夋閻忕姵绻涚涵椋庣瘈闁诡噯绻濋崺鈩冨閸楃偟绉洪柟顔规櫅椤斿繘顢欓悾宀€鈼ラ梻?
      */
     private void checkAdmin() {
         Long userId = UserContext.getCurrentUserId();
@@ -235,7 +237,7 @@ public class AdminController {
     }
 
     /**
-     * 鍚庡彴璇剧▼鏂板锛屼繚瀛樺墠缁熶竴娓呮礂浠樿垂閰嶇疆銆?
+     * 闂傚倸鍊风粈渚€骞夐敓鐘冲殞闁绘劦鍓﹀▓鑺ユ叏濠靛棜顫﹀ù婊冪秺閹妫冨☉娆忔殘闁诲孩纰嶅畝鎼佸蓟濞戙垹绠绘俊鐐额嚙娴滈箖姊洪崫鍕潶闁稿﹥绻堝濠氭晸閻樿尙锛滃┑鐐村灦閻熝囧礄閳ユ剚娓婚柕鍫濆暙閳ь剚娲熷畷顖炲箻椤斿吋鐎悗骞垮劚濞诧絽鈻介鍫熺厾婵炴潙顑嗗▍鍥ㄣ亜閺冣偓濡啴寮婚敐鍡樺劅闁靛繆鎳囨慨鍥⒑閹稿氦澹樻い顓″劵椤︽潙鈹戦鈧ˉ鎾澄ｉ幇鏉跨婵°倓绀佹禍婊堟⒑閸涘﹥灏紒鍨涘墲鐎靛ジ宕惰閺€浠嬫煟閹邦剛鎽犻悘蹇ｅ弮閺岀喖宕橀懠顒傤唺缂備緡鍠栭悧鎾崇暦閹烘垟妲堟慨妯哄悑缁侇偅绻濈喊妯活潑闁搞劋鍗抽幃妯衡攽鐎ｎ偄鈧灚銇勯幘鍗炵仾闁抽攱鍨块弻鈩冨緞鎼淬垻銆婇柤鍙夌墵濮婂搫效閸パ€鍋撻弴鐐嶆稑鈹戦崶锔剧畾?
      */
     @PostMapping("/course")
     public Result<Map<String, Long>> addCourse(@RequestBody Course course) {
@@ -252,7 +254,7 @@ public class AdminController {
     }
 
     /**
-     * 鍚庡彴璇剧▼缂栬緫锛岄伩鍏嶆妸闈炴硶浠锋牸缁勫悎鐩存帴鍐欒繘鏁版嵁搴撱€?
+     * 闂傚倸鍊风粈渚€骞夐敓鐘冲殞闁绘劦鍓﹀▓鑺ユ叏濠靛棜顫﹀ù婊冪秺閹妫冨☉娆忔殘闁诲孩纰嶅畝鎼佸蓟濞戙垹绠绘俊鐐额嚙娴滈箖姊洪崫鍕潶闁稿﹥顨堝Σ鎰板箻鐠囪尙锛滃┑鐐村灦閼归箖鍩涙繝鍕＝濞撴埃鍋撴い銈呭€垮畷鎴炵節閸パ勭€悗骞垮劚閹虫劙寮抽崱娑欑厱闁哄洢鍔嬬花鐣岀磼鏉堛劌鍝烘慨濠呮缁瑧鎹勯妸褜鍞剁紓鍌欑椤︻垶鎮樺顓犫攳濠电姴娲ょ粻鐟懊归敐鍫殐婵☆偄鍟村铏圭磼濡搫顫屽銈嗘处閸欏啯淇婄€涙绡€闁稿鍨扮紞濠囧箖閳哄啰纾兼俊顖滅帛濞堟悂姊绘担铏瑰笡妞ゃ劌鎳橀獮妤€顭ㄩ崨顕呮綗闂佸湱鍎ら〃鍛矆鐎ｎ偁浜滈柟鏉垮閸掍即鏌嶈閸忔瑩宕愬┑瀣摕闁挎繂顦悡娑樏归敐鍥у妺闁规彃銈搁弻锝夊閳轰胶浠梺鍦焾閸熷潡鎮惧畡鎷旂喓鎮伴埄鍐偓濠氭⒑閸︻厼鍔嬫慨濠傤煼椤㈡瑩骞掑Δ浣叉嫼闁哄鍋炴刊浠嬪礂鐏炵瓔鐔嗙憸搴ㄣ€冮崨瀛樺仼闁割煈鍋呮刊鎾偡濞嗗繐顏╅柛鏂挎嚇濮婃椽宕烽鐐板婵犫拃鍐弰鐎?
      */
     @PutMapping("/course/{courseId}")
     public Result<?> updateCourse(@PathVariable Long courseId, @RequestBody Course course) {
@@ -471,17 +473,19 @@ public class AdminController {
     }
 
     /**
-     * 璇剧▼浠锋牸褰掍竴鍖栥€?
-     * 鍏嶈垂璇剧▼浠锋牸寮哄埗涓?0锛屽彧鏈夊紑鍏虫墦寮€涓斾环鏍煎ぇ浜?0 鎵嶇畻浠樿垂銆?
+     * 闂傚倷娴囧畷鍨叏閺夋嚚娲Χ閸℃ɑ鐝锋繛瀵稿Т椤戝懘鎮″┑瀣厱闊洦鑹炬禍瑙勩亜閳哄啫鍘存慨濠冩そ瀹曞綊顢氶崨顓炲濠电姰鍨奸～澶愬礉濡ゅ懎绠熼柟闂寸劍閸嬪鏌涢锝囩畼闁荤喐鍔楃槐鎾存媴鐟欏嫧鎷归梺鍦焾閸熷潡鎮鹃悜鑺ュ亹閻犲洦褰冮崬銊╂⒑闂堟侗妲堕柛銊潐缁?
+     * 闂傚倸鍊烽懗鍫曗€﹂崼銏″床闁归偊鍠氶惌鎾绘煟閹达絾顥夐柛銊ュ€块弻娑氫沪閸撗呯厑闁诲孩纰嶅畝鎼佸蓟濞戙垹绠绘俊鐐额嚙娴滈箖姊洪崫鍕潶闁稿﹥娲熷﹢渚€姊虹紒姗嗙劷缂侇噮鍨跺顐︽焼瀹ュ棛鍘藉┑掳鍊曢崰姘舵倿閻愵兙浜滈柡鍥朵簽缁夘喚鈧娲﹂崑濠傜暦閻旂⒈鏁冮柕鍫濇噹缁犳垶绻?0闂傚倸鍊烽悞锔锯偓绗涘懐鐭欓柟杈鹃檮閸ゆ劖銇勯弽銊х細濞存粌婀遍幉鎼佸棘濞嗘儳娈ㄩ梺鍓茬厛閸嬪嫮娆㈤悙娴嬫斀闁绘ɑ褰冮顐︽煥濞戞瑧娲存慨濠呮缁瑧鎹勯妸褜鍟堟繝鐢靛仜閹冲繐煤濮椻偓瀵煡宕奸弴鐔告珖闂侀€炲苯澧存い銏″哺閺佹劖寰勬繝鍕Е婵＄偑鍊栫敮濠囨嚄閸洖鐓濋柡鍐ㄧ墛閻撴盯鏌涚仦鎹愬闁抽攱姊归〃銉╂倷閸欏妫﹂梺鍝勫閳ь剚鍓氶崥瀣煕閵夋垵鍟╃划顖炴⒒娓氣偓濞佳兠洪妶鍚ゆ椽鏁傞崜褏鐒?0 闂傚倸鍊风粈浣虹礊婵犲偆鐒界憸蹇曞垝閺冨牆閱囬柡鍥╁枎娴犺偐绱撻崒娆戝妽妞ゎ厼娲妴鍛存煥鐎ｂ晝绠氬銈嗙墬濮樸劍绂掗姀銈嗙厽閹兼惌鍠栧顕€鏌?
      */
     private void normalizeCoursePricing(Course course) {
         if (course == null) {
             throw new BusinessException(400, "Course payload cannot be null");
         }
-        int normalizedCost = course.getPointsCost() == null ? 0 : Math.max(course.getPointsCost(), 0);
-        boolean paidCourse = course.getRequiresPoints() != null && course.getRequiresPoints() == 1 && normalizedCost > 0;
-        course.setRequiresPoints(paidCourse ? 1 : 0);
-        course.setPointsCost(paidCourse ? normalizedCost : 0);
+        BigDecimal normalizedPrice = course.getPriceAmount() == null
+                ? BigDecimal.ZERO
+                : course.getPriceAmount().max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+        course.setPriceAmount(normalizedPrice);
+        course.setRequiresPoints(0);
+        course.setPointsCost(0);
     }
 
     private Integer getNextChapterSort(Long courseId) {

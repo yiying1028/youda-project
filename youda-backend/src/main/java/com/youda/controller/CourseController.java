@@ -45,7 +45,7 @@ public class CourseController {
 
     @PostMapping("/{courseId}/purchase")
     public Result<Map<String, Object>> purchaseCourse(@PathVariable Long courseId) {
-        return Result.success("Purchase successful", courseService.purchaseCourse(courseId));
+        return Result.success("Order created", courseService.purchaseCourse(courseId));
     }
 
     @GetMapping("/order/my")
@@ -53,9 +53,19 @@ public class CourseController {
         return Result.success(courseService.getMyCourseOrders());
     }
 
+    @PostMapping("/order/{orderId}/pay")
+    public Result<Map<String, Object>> payCourseOrder(@PathVariable Long orderId) {
+        return Result.success("Payment successful", courseService.payCourseOrder(orderId));
+    }
+
+    @PostMapping("/order/{orderId}/complete")
+    public Result<Map<String, Object>> completeCourseOrder(@PathVariable Long orderId) {
+        return Result.success("Order completed", courseService.completeCourseOrder(orderId));
+    }
+
     @PostMapping("/order/{orderId}/receive")
     public Result<Map<String, Object>> confirmCourseOrderReceived(@PathVariable Long orderId) {
-        return Result.success("Receive confirmed", courseService.confirmCourseOrderReceived(orderId));
+        return Result.success("Order completed", courseService.completeCourseOrder(orderId));
     }
 
     @GetMapping("/video/{videoId}")

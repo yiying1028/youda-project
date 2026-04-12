@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -36,6 +37,8 @@ public class Course {
     private Integer requiresPoints;
 
     private Integer pointsCost;
+
+    private BigDecimal priceAmount;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
