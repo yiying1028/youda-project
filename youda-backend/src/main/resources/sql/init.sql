@@ -1,646 +1,537 @@
--- 浼樼瓟路涓皬瀛︾瓟鐤戠綉 鏁版嵁搴撳垵濮嬪寲鑴氭湰
-CREATE DATABASE IF NOT EXISTS `youda` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+﻿-- 优答·中小学答疑平台初始化脚本
+-- 说明：
+-- 1. 本脚本用于初始化全新数据库。
+-- 2. 字符集统一使用 utf8mb4。
+-- 3. 已直接写入当前项目实际使用的最终表结构，无需再额外执行迁移脚本。
+
+CREATE DATABASE IF NOT EXISTS `youda`
+    DEFAULT CHARACTER SET utf8mb4
+    COLLATE utf8mb4_general_ci;
 
 USE `youda`;
 SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
 
 -- =============================================
--- 1. 鐢ㄦ埛琛?-- =============================================
-DROP TABLE IF EXISTS `user`;
-CREATE TABLE `user` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '鐢ㄦ埛ID',
-    `username` VARCHAR(50) NOT NULL COMMENT '鐢ㄦ埛鍚?,
-    `password` VARCHAR(100) NOT NULL COMMENT '瀵嗙爜',
-    `nickname` VARCHAR(50) DEFAULT NULL COMMENT '鏄电О',
-    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '澶村儚',
-    `role` TINYINT DEFAULT 0 COMMENT '瑙掕壊锛?鐢ㄦ埛 1绠＄悊鍛?,
-    `status` TINYINT DEFAULT 1 COMMENT '鐘舵€侊細0绂佺敤 1姝ｅ父',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '鏇存柊鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_username` (`username`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鐢ㄦ埛琛?;
-
+-- 删除旧表
 -- =============================================
--- 2. 甯栧瓙鍒嗙被琛?-- =============================================
-DROP TABLE IF EXISTS `category`;
-CREATE TABLE `category` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '鍒嗙被ID',
-    `name` VARCHAR(50) NOT NULL COMMENT '鍒嗙被鍚嶇О',
-    `sort` INT DEFAULT 0 COMMENT '鎺掑簭',
-    `status` TINYINT DEFAULT 1 COMMENT '鐘舵€侊細0绂佺敤 1姝ｅ父',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='甯栧瓙鍒嗙被琛?;
-
--- =============================================
--- 3. 甯栧瓙琛?-- =============================================
-DROP TABLE IF EXISTS `post`;
-CREATE TABLE `post` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '甯栧瓙ID',
-    `title` VARCHAR(200) NOT NULL COMMENT '鏍囬',
-    `content` TEXT NOT NULL COMMENT '鍐呭',
-    `user_id` BIGINT NOT NULL COMMENT '浣滆€匢D',
-    `category_id` BIGINT NOT NULL COMMENT '鍒嗙被ID',
-    `view_count` INT DEFAULT 0 COMMENT '娴忚鏁?,
-    `like_count` INT DEFAULT 0 COMMENT '鐐硅禐鏁?,
-    `comment_count` INT DEFAULT 0 COMMENT '璇勮鏁?,
-    `collect_count` INT DEFAULT 0 COMMENT '鏀惰棌鏁?,
-    `is_top` TINYINT DEFAULT 0 COMMENT '鏄惁缃《',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '鏇存柊鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_user_id` (`user_id`),
-    KEY `idx_category_id` (`category_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='甯栧瓙琛?;
-
--- =============================================
--- 4. 璇勮琛?-- =============================================
-DROP TABLE IF EXISTS `comment`;
-CREATE TABLE `comment` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '璇勮ID',
-    `post_id` BIGINT NOT NULL COMMENT '甯栧瓙ID',
-    `user_id` BIGINT NOT NULL COMMENT '鐢ㄦ埛ID',
-    `content` VARCHAR(500) NOT NULL COMMENT '璇勮鍐呭',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_post_id` (`post_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璇勮琛?;
-
--- =============================================
--- 5. 鐐硅禐琛?-- =============================================
-DROP TABLE IF EXISTS `post_like`;
-CREATE TABLE `post_like` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `user_id` BIGINT NOT NULL COMMENT '鐢ㄦ埛ID',
-    `post_id` BIGINT NOT NULL COMMENT '甯栧瓙ID',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_post` (`user_id`, `post_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鐐硅禐琛?;
-
--- =============================================
--- 6. 鏀惰棌琛?-- =============================================
-DROP TABLE IF EXISTS `post_collect`;
-CREATE TABLE `post_collect` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `user_id` BIGINT NOT NULL COMMENT '鐢ㄦ埛ID',
-    `post_id` BIGINT NOT NULL COMMENT '甯栧瓙ID',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_post` (`user_id`, `post_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鏀惰棌琛?;
-
--- =============================================
--- 7. 瀛︾琛?-- =============================================
-DROP TABLE IF EXISTS `subject`;
-CREATE TABLE `subject` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '瀛︾ID',
-    `name` VARCHAR(50) NOT NULL COMMENT '瀛︾鍚嶇О',
-    `sort` INT DEFAULT 0 COMMENT '鎺掑簭',
-    `status` TINYINT DEFAULT 1 COMMENT '鐘舵€侊細0绂佺敤 1姝ｅ父',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瀛︾琛?;
-
--- =============================================
--- 8. 骞寸骇琛?-- =============================================
-DROP TABLE IF EXISTS `grade`;
-CREATE TABLE `grade` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '骞寸骇ID',
-    `name` VARCHAR(50) NOT NULL COMMENT '骞寸骇鍚嶇О',
-    `level` VARCHAR(20) NOT NULL COMMENT '瀛︽',
-    `sort` INT DEFAULT 0 COMMENT '鎺掑簭',
-    `status` TINYINT DEFAULT 1 COMMENT '鐘舵€侊細0绂佺敤 1姝ｅ父',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='骞寸骇琛?;
-
--- =============================================
--- 9. 瀛︿範璧勬枡琛?-- =============================================
-DROP TABLE IF EXISTS `resource`;
-CREATE TABLE `resource` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '璧勬枡ID',
-    `name` VARCHAR(200) NOT NULL COMMENT '璧勬枡鍚嶇О',
-    `description` TEXT COMMENT '璧勬枡鎻忚堪',
-    `file_name` VARCHAR(255) NOT NULL COMMENT '鏂囦欢鍚?,
-    `file_path` VARCHAR(500) NOT NULL COMMENT '鏂囦欢璺緞',
-    `file_type` VARCHAR(20) NOT NULL COMMENT '鏂囦欢绫诲瀷',
-    `file_size` BIGINT NOT NULL COMMENT '鏂囦欢澶у皬',
-    `subject_id` BIGINT NOT NULL COMMENT '瀛︾ID',
-    `grade_id` BIGINT NOT NULL COMMENT '骞寸骇ID',
-    `user_id` BIGINT DEFAULT NULL COMMENT '涓婁紶鑰匢D',
-    `download_count` INT DEFAULT 0 COMMENT '涓嬭浇娆℃暟',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_subject_id` (`subject_id`),
-    KEY `idx_grade_id` (`grade_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瀛︿範璧勬枡琛?;
-
--- =============================================
--- 10. AI瀵硅瘽琛?-- =============================================
-DROP TABLE IF EXISTS `chat`;
-CREATE TABLE `chat` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `chat_id` VARCHAR(50) NOT NULL COMMENT '瀵硅瘽ID',
-    `user_id` BIGINT NOT NULL COMMENT '鐢ㄦ埛ID',
-    `title` VARCHAR(200) DEFAULT NULL COMMENT '瀵硅瘽鏍囬',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '鏇存柊鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_chat_id` (`chat_id`),
-    KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI瀵硅瘽琛?;
-
--- =============================================
--- 11. 瀵硅瘽娑堟伅琛?-- =============================================
-DROP TABLE IF EXISTS `chat_message`;
-CREATE TABLE `chat_message` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `chat_id` VARCHAR(50) NOT NULL COMMENT '瀵硅瘽ID',
-    `role` VARCHAR(20) NOT NULL COMMENT '瑙掕壊锛歶ser/assistant',
-    `content` TEXT NOT NULL COMMENT '娑堟伅鍐呭',
-    `image` VARCHAR(500) DEFAULT NULL COMMENT '鍥剧墖璺緞',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    PRIMARY KEY (`id`),
-    KEY `idx_chat_id` (`chat_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瀵硅瘽娑堟伅琛?;
-
--- =============================================
--- 12. 璇剧▼琛?-- =============================================
-DROP TABLE IF EXISTS `course`;
-CREATE TABLE `course` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '璇剧▼ID',
-    `name` VARCHAR(200) NOT NULL COMMENT '璇剧▼鍚嶇О',
-    `description` TEXT COMMENT '璇剧▼鎻忚堪',
-    `cover_image` VARCHAR(500) DEFAULT NULL COMMENT '灏侀潰鍥?,
-    `teacher_name` VARCHAR(50) DEFAULT NULL COMMENT '鏁欏笀鍚嶇О',
-    `subject_id` BIGINT NOT NULL COMMENT '瀛︾ID',
-    `grade_id` BIGINT NOT NULL COMMENT '骞寸骇ID',
-    `chapter_count` INT DEFAULT 0 COMMENT '绔犺妭鏁?,
-    `student_count` INT DEFAULT 0 COMMENT '瀛︿範浜烘暟',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '鏇存柊鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_subject_id` (`subject_id`),
-    KEY `idx_grade_id` (`grade_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璇剧▼琛?;
-
--- =============================================
--- 13. 璇剧▼绔犺妭琛?-- =============================================
-DROP TABLE IF EXISTS `course_chapter`;
-CREATE TABLE `course_chapter` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '绔犺妭ID',
-    `course_id` BIGINT NOT NULL COMMENT '璇剧▼ID',
-    `title` VARCHAR(200) NOT NULL COMMENT '绔犺妭鏍囬',
-    `sort` INT DEFAULT 0 COMMENT '鎺掑簭',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_course_id` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璇剧▼绔犺妭琛?;
-
--- =============================================
--- 14. 璇剧▼瑙嗛琛?-- =============================================
-DROP TABLE IF EXISTS `course_video`;
-CREATE TABLE `course_video` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '瑙嗛ID',
-    `course_id` BIGINT NOT NULL COMMENT '璇剧▼ID',
-    `chapter_id` BIGINT NOT NULL COMMENT '绔犺妭ID',
-    `title` VARCHAR(200) NOT NULL COMMENT '瑙嗛鏍囬',
-    `video_url` VARCHAR(500) NOT NULL COMMENT '瑙嗛鍦板潃',
-    `duration` INT DEFAULT 0 COMMENT '鏃堕暱(绉?',
-    `sort` INT DEFAULT 0 COMMENT '鎺掑簭',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`),
-    KEY `idx_chapter_id` (`chapter_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璇剧▼瑙嗛琛?;
-
--- =============================================
--- 15. 瀛︿範杩涘害琛?-- =============================================
-DROP TABLE IF EXISTS `learning_progress`;
-CREATE TABLE `learning_progress` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT 'ID',
-    `user_id` BIGINT NOT NULL COMMENT '鐢ㄦ埛ID',
-    `course_id` BIGINT NOT NULL COMMENT '璇剧▼ID',
-    `video_id` BIGINT NOT NULL COMMENT '瑙嗛ID',
-    `position` INT DEFAULT 0 COMMENT '鎾斁浣嶇疆(绉?',
-    `is_completed` TINYINT DEFAULT 0 COMMENT '鏄惁瀹屾垚',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '鏇存柊鏃堕棿',
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_video` (`user_id`, `video_id`),
-    KEY `idx_user_course` (`user_id`, `course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='瀛︿範杩涘害琛?;
-
--- =============================================
--- 16. 鍏憡琛?-- =============================================
-DROP TABLE IF EXISTS `announcement`;
-CREATE TABLE `announcement` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '鍏憡ID',
-    `title` VARCHAR(200) NOT NULL COMMENT '鍏憡鏍囬',
-    `content` TEXT NOT NULL COMMENT '鍏憡鍐呭',
-    `status` TINYINT DEFAULT 1 COMMENT '鐘舵€侊細0绂佺敤 1姝ｅ父',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '鍒涘缓鏃堕棿',
-    `is_deleted` TINYINT DEFAULT 0 COMMENT '鏄惁鍒犻櫎',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍏憡琛?;
-
--- =============================================
--- 鍒濆鍖栨暟鎹?-- =============================================
-
--- 绠＄悊鍛樿处鍙凤紙瀵嗙爜锛歛dmin123锛?INSERT INTO `user` (`username`, `password`, `nickname`, `role`, `status`) VALUES
-('admin', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', '绠＄悊鍛?, 1, 1);
-
--- 瀛︾鏁版嵁
-INSERT INTO `subject` (`name`, `sort`, `status`) VALUES
-('璇枃', 1, 1),
-('鏁板', 2, 1),
-('鑻辫', 3, 1),
-('鐗╃悊', 4, 1),
-('鍖栧', 5, 1),
-('鐢熺墿', 6, 1),
-('鍘嗗彶', 7, 1),
-('鍦扮悊', 8, 1),
-('鏀挎不', 9, 1);
-
--- 骞寸骇鏁版嵁
-INSERT INTO `grade` (`name`, `level`, `sort`, `status`) VALUES
-('涓€骞寸骇', '灏忓', 1, 1),
-('浜屽勾绾?, '灏忓', 2, 1),
-('涓夊勾绾?, '灏忓', 3, 1),
-('鍥涘勾绾?, '灏忓', 4, 1),
-('浜斿勾绾?, '灏忓', 5, 1),
-('鍏勾绾?, '灏忓', 6, 1),
-('鍒濅竴', '鍒濅腑', 7, 1),
-('鍒濅簩', '鍒濅腑', 8, 1),
-('鍒濅笁', '鍒濅腑', 9, 1),
-('楂樹竴', '楂樹腑', 10, 1),
-('楂樹簩', '楂樹腑', 11, 1),
-('楂樹笁', '楂樹腑', 12, 1);
-
--- 甯栧瓙鍒嗙被鏁版嵁
-INSERT INTO `category` (`name`, `sort`, `status`) VALUES
-('璇枃', 1, 1),
-('鏁板', 2, 1),
-('鑻辫', 3, 1),
-('鐗╃悊', 4, 1),
-('鍖栧', 5, 1),
-('鐢熺墿', 6, 1),
-('鍘嗗彶', 7, 1),
-('鍦扮悊', 8, 1),
-('鏀挎不', 9, 1),
-('缁煎悎', 10, 1);
-
--- 娴嬭瘯鍏憡
-INSERT INTO `announcement` (`title`, `content`, `status`) VALUES
-('娆㈣繋浣跨敤浼樼瓟绛旂枒缃?, '浼樼瓟路涓皬瀛︾瓟鐤戠綉姝ｅ紡涓婄嚎鍟︼紒鍦ㄨ繖閲屼綘鍙互鎻愰棶銆佸涔犮€佷氦娴侊紝蹇潵浣撻獙鍚э紒', 1),
-('骞冲彴浣跨敤椤荤煡', '璇锋枃鏄庡彂瑷€锛屼簰鐩稿皧閲嶏紝鍏卞悓钀ラ€犺壇濂界殑瀛︿範姘涘洿銆?, 1);
-
--- notebook and points extension
-ALTER TABLE `user`
-    ADD COLUMN `phone` VARCHAR(20) DEFAULT NULL COMMENT '鎵嬫満鍙?,
-    ADD COLUMN `bio` VARCHAR(255) DEFAULT NULL COMMENT '涓汉绠€浠?,
-    ADD COLUMN `points` INT DEFAULT 0 COMMENT '绉垎',
-    ADD COLUMN `virtual_balance` INT DEFAULT 0 COMMENT '铏氭嫙甯佷綑棰?;
-
-DROP TABLE IF EXISTS `wrong_question`;
-CREATE TABLE `wrong_question` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id` BIGINT NOT NULL,
-    `subject_id` BIGINT NOT NULL,
-    `grade_id` BIGINT NOT NULL,
-    `question_content` TEXT NOT NULL,
-    `question_image` VARCHAR(500) DEFAULT NULL,
-    `my_answer` TEXT DEFAULT NULL,
-    `correct_answer` TEXT NOT NULL,
-    `error_reason` VARCHAR(255) DEFAULT NULL,
-    `mastery_status` TINYINT DEFAULT 0,
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `is_deleted` TINYINT DEFAULT 0,
-    PRIMARY KEY (`id`),
-    KEY `idx_wrong_question_user` (`user_id`),
-    KEY `idx_wrong_question_subject` (`subject_id`),
-    KEY `idx_wrong_question_grade` (`grade_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='閿欓鏈?;
-
-DROP TABLE IF EXISTS `user_checkin`;
-CREATE TABLE `user_checkin` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id` BIGINT NOT NULL,
-    `checkin_date` DATE NOT NULL,
-    `points_reward` INT DEFAULT 0,
-    `bonus_points` INT DEFAULT 0,
-    `streak_days` INT DEFAULT 1,
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_checkin_date` (`user_id`, `checkin_date`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鐢ㄦ埛绛惧埌璁板綍';
-
-DROP TABLE IF EXISTS `points_record`;
-CREATE TABLE `points_record` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id` BIGINT NOT NULL,
-    `action_type` VARCHAR(50) NOT NULL,
-    `biz_id` VARCHAR(64) NOT NULL,
-    `points` INT NOT NULL,
-    `remark` VARCHAR(255) DEFAULT NULL,
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_action_biz` (`user_id`, `action_type`, `biz_id`),
-    KEY `idx_points_record_user_time` (`user_id`, `create_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='绉垎鏄庣粏';
-
--- =============================================
--- 鎵╁睍娴嬭瘯鏁版嵁
--- 鎵€鏈夋祴璇曡处鍙烽粯璁ゅ瘑鐮侊細admin123
--- =============================================
-
--- 琛ュ厖绠＄悊鍛樿祫鏂?UPDATE `user`
-SET `phone` = '13800000000',
-    `bio` = '骞冲彴榛樿绠＄悊鍛樿处鍙?,
-    `points` = 999,
-    `virtual_balance` = 999
-WHERE `username` = 'admin';
-
--- 鏅€氭祴璇曠敤鎴?INSERT INTO `user` (`username`, `password`, `nickname`, `avatar`, `phone`, `bio`, `points`, `virtual_balance`, `role`, `status`) VALUES
-('student_zhang', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', '寮犲皬闆?, 'https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_photography.jpg', '13900000001', '鍒濅簩瀛︾敓锛屽枩娆㈡暟瀛﹀拰鐗╃悊', 21, 120, 0, 1),
-('student_li', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', '鏉庢槑杞?, 'https://upload.wikimedia.org/wikipedia/commons/1/1e/PORTRAIT_PICTURE.jpg', '13900000002', '楂樹竴瀛︾敓锛屾鍦ㄥ噯澶囪嫳璇綔鏂囨彁鍗?, 21, 88, 0, 1),
-('student_wang', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', '鐜嬪彲蹇?, 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Portrait_woman.jpg', '13900000003', '鍒濅笁瀛︾敓锛屽父鏁寸悊鐗╃悊鍜屽寲瀛﹂敊棰?, 11, 64, 0, 1);
-
--- 娴嬭瘯甯栧瓙
-INSERT INTO `post` (`title`, `content`, `user_id`, `category_id`, `view_count`, `like_count`, `comment_count`, `collect_count`, `is_top`, `create_time`, `update_time`) VALUES
-('鍒濅簩鏁板锛氫竴娆″嚱鏁版€绘槸鐪嬪浘灏变贡锛屾€庝箞蹇€熷垽鏂鍑忔€э紵', '鎴戠幇鍦ㄤ竴鐪嬪埌涓€娆″嚱鏁板浘鍍忓氨绱у紶锛屽挨鍏舵槸棰樼洰鎶婃枃瀛楁潯浠跺拰鍥惧儚鏀惧湪涓€璧风殑鏃跺€欙紝鎬绘媴蹇冪鍙峰垽鏂敊銆傛湁娌℃湁鍥哄畾姝ラ鍙互鍏堢湅鏂滅巼銆佸啀鐪嬫埅璺濓紝鏈€鍚庡啀鍒ゆ柇澧炲噺鎬э紵', 2, 2, 126, 2, 2, 1, 1, DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY)),
-('鑻辫浣滄枃鎬诲啓涓嶉暱锛屾€庢牱鎶婂彞瀛愬啓寰楁洿瀹屾暣锛?, '姣忔鍐欒嫳璇綔鏂囬兘鍙湁鍑犲彞绠€鍗曞彞锛岃€佸笀璇村唴瀹瑰お鍗曡杽銆傛垜鎯崇煡閬撳钩鏃跺簲璇ユ€庝箞绉疮杩炴帴璇嶅拰鎵╁啓鍙ュ瀷锛屾墠鑳芥妸涓€娈佃瘽鍐欏畬鏁淬€?, 3, 3, 84, 1, 1, 2, 0, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY)),
-('鐗╃悊鍙楀姏鍒嗘瀽鎬绘紡鍔涳紝澶у鏈変粈涔堟鏌ユ柟娉曪紵', '鍋氬彈鍔涘垎鏋愰鏃讹紝鎴戠粡甯告妸鏀寔鍔涘拰鎽╂摝鍔涙紡鎺夛紝灏ゅ叾鏄枩闈㈠拰澶氫釜鐗╀綋鐩歌繛鐨勬椂鍊欍€傛湁娌℃湁涓€濂椾粠鐮旂┒瀵硅薄鍒扮敾鍥炬爣娉ㄧ殑妫€鏌ラ『搴忥紵', 4, 4, 56, 1, 1, 1, 0, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('骞冲彴绛旂枒鍖哄彂甯栬鑼冭鏄?, '鎻愰棶鏃跺缓璁ˉ鍏呭勾绾с€佸绉戙€侀鐩師鏂囧拰鑷繁鐨勬€濊矾銆傝繖鏍锋洿瀹规槗寰楀埌鍑嗙‘銆佸彲鎵ц鐨勮В绛旓紝涔熸柟渚垮叾浠栧悓瀛︽绱㈢浉浼奸棶棰樸€?, 1, 10, 32, 0, 0, 0, 0, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY));
-
--- 娴嬭瘯璇勮
-INSERT INTO `comment` (`post_id`, `user_id`, `content`, `create_time`) VALUES
-(1, 3, '鍙互鍏堢湅鍥惧儚鏄粠宸︿笅鍒板彸涓婅繕鏄粠宸︿笂鍒板彸涓嬶紝鍐嶅垽鏂?k 鐨勬璐燂紝鏈€鍚庡啀缁撳悎棰樼洰缁欏嚭鐨勪氦鐐逛俊鎭€?, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(1, 4, '鎴戣嚜宸变細鍏堝啓涓€鍙ワ細x 澧炲ぇ鏃讹紝y 鏄惁闅忎箣澧炲ぇ銆傛妸鏂囧瓧缈绘垚鍥惧儚璇█鍚庯紝灏变笉瀹规槗涔便€?, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 2, '浣滄枃鍙互鍏堝噯澶囧嚑涓竾鑳借繛鎺ヨ瘝锛屾瘮濡?firstly銆乮n addition銆乤s a result锛屽啀鎶婂師鍥犲拰缁撴灉鍚勮ˉ涓€鍙ャ€?, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(3, 1, '鍙楀姏鍒嗘瀽鏈€鍏抽敭鐨勬槸鍏堥€夌爺绌跺璞★紝鍐嶆妸鎺ヨЕ闈竴涓釜妫€鏌ワ紝寰堝婕忓姏閮芥槸鍥犱负娌℃湁閫愪釜妫€鏌ユ帴瑙﹀叧绯汇€?, DATE_SUB(NOW(), INTERVAL 2 DAY));
-
--- 娴嬭瘯鐐硅禐
-INSERT INTO `post_like` (`user_id`, `post_id`, `create_time`) VALUES
-(3, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(4, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(3, 3, DATE_SUB(NOW(), INTERVAL 2 DAY));
-
--- 娴嬭瘯鏀惰棌
-INSERT INTO `post_collect` (`user_id`, `post_id`, `create_time`) VALUES
-(3, 1, DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(2, 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(4, 2, DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 3, DATE_SUB(NOW(), INTERVAL 2 DAY));
-
--- 娴嬭瘯璧勬枡
-INSERT INTO `resource` (`name`, `description`, `file_name`, `file_path`, `file_type`, `file_size`, `subject_id`, `grade_id`, `user_id`, `download_count`, `create_time`) VALUES
-('鍒濅腑鏁板鍑芥暟鍩虹鏁寸悊', '閫傚悎鍒濅竴鍒板垵浜屽涔犲嚱鏁板熀纭€姒傚康銆佸浘鍍忎笌甯歌棰樺瀷銆?, 'math-function-summary.txt', 'uploads/resource/demo/math-function-summary.txt', 'txt', 2048, 2, 8, 2, 15, DATE_SUB(NOW(), INTERVAL 6 DAY)),
-('楂樹腑鑻辫浣滄枃杩炴帴璇嶆竻鍗?, '鏁寸悊浜嗗父瑙佷綔鏂囪鎺ヨ瘝鍜屽彞寮忔浛鎹㈣〃杈俱€?, 'english-writing-links.txt', 'uploads/resource/demo/english-writing-links.txt', 'txt', 1536, 3, 10, 3, 11, DATE_SUB(NOW(), INTERVAL 5 DAY)),
-('鍒濅腑鐗╃悊鍙楀姏鍒嗘瀽妯℃澘', '鍖呭惈鍙楀姏鍒嗘瀽姝ラ銆佸吀鍨嬮敊璇拰鑷娓呭崟銆?, 'physics-force-template.txt', 'uploads/resource/demo/physics-force-template.txt', 'txt', 1890, 4, 9, 4, 9, DATE_SUB(NOW(), INTERVAL 4 DAY));
-
--- 娴嬭瘯 AI 瀵硅瘽
-INSERT INTO `chat` (`chat_id`, `user_id`, `title`, `create_time`, `update_time`) VALUES
-('chat_seed_001', 2, '浜屾鍑芥暟姹傛渶鍊?, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('chat_seed_002', 3, '鑻辫浣滄枃娑﹁壊寤鸿', DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
-
-INSERT INTO `chat_message` (`chat_id`, `role`, `content`, `create_time`) VALUES
-('chat_seed_001', 'user', '鑰佸笀锛岃繖閬撲簩娆″嚱鏁伴鎴戜笉浼氭眰鏈€鍊硷紝鍙互鍏堝憡璇夋垜搴旇鐪嬮《鐐硅繕鏄厤鏂瑰悧锛?, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('chat_seed_001', 'assistant', '鍏堢湅鍑芥暟瑙ｆ瀽寮忔槸鍚︽柟渚跨洿鎺ラ厤鏂癸紱濡傛灉宸茬粡鏄《鐐瑰紡锛屽氨鐩存帴鏍规嵁椤剁偣鍧愭爣鍒ゆ柇鏈€鍊笺€?, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('chat_seed_002', 'user', '璇峰府鎴戞妸杩欐鑻辫浣滄枃寮€澶存敼寰楁洿鑷劧涓€浜涖€?, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-('chat_seed_002', 'assistant', '鍙互鍏堢粰鍑轰富棰樺彞锛屽啀琛ュ厖鍘熷洜鍜屼釜浜烘劅鍙楋紝杩欐牱浼氭瘮鍗曠嫭涓€鍙ヨ鐐规洿瀹屾暣銆?, DATE_SUB(NOW(), INTERVAL 1 DAY));
-
--- 娴嬭瘯璇剧▼
-INSERT INTO `course` (`name`, `description`, `cover_image`, `teacher_name`, `subject_id`, `grade_id`, `chapter_count`, `student_count`, `create_time`, `update_time`) VALUES
-('鍒濅腑鏁板鍑芥暟涓撻」绐佺牬', '鍥寸粫鍑芥暟鍥惧儚銆佽В鏋愬紡鍜屽簲鐢ㄩ寤虹珛瀹屾暣瑙ｉ姝ラ銆?, 'https://upload.wikimedia.org/wikipedia/commons/8/84/Learning_Mathematics.jpg', '鍛ㄨ€佸笀', 2, 8, 2, 2, 0.00, DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
-('楂樹腑鑻辫鍐欎綔琛ㄨ揪鎻愬崌', '浠庡彞寮忔墿鍐欍€佽繛鎺ヨ瘝浣跨敤鍒颁綔鏂囩粨鏋勬惌寤虹殑绯荤粺璇剧▼銆?, 'https://upload.wikimedia.org/wikipedia/commons/6/60/A_book.jpg', '闄堣€佸笀', 3, 10, 2, 1, 16.00, DATE_SUB(NOW(), INTERVAL 10 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
-
-INSERT INTO `course_chapter` (`course_id`, `title`, `sort`, `create_time`) VALUES
-(1, '鍑芥暟鍥惧儚涓庡鍑忔€?, 1, DATE_SUB(NOW(), INTERVAL 12 DAY)),
-(1, '寰呭畾绯绘暟娉曚笌搴旂敤棰?, 2, DATE_SUB(NOW(), INTERVAL 11 DAY)),
-(2, '浣滄枃寮€澶翠笌涓婚鍙?, 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
-(2, '杩炴帴璇嶄笌娈佃惤鎵╁啓', 2, DATE_SUB(NOW(), INTERVAL 9 DAY));
-
-INSERT INTO `course_video` (`course_id`, `chapter_id`, `title`, `video_url`, `duration`, `sort`, `create_time`) VALUES
-(1, 1, '鐢ㄥ浘鍍忓垽鏂竴娆″嚱鏁版€ц川', 'https://filesamples.com/samples/video/mp4/sample_640x360.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 12 DAY)),
-(1, 2, '鍑芥暟搴旂敤棰樺父瑙佽闂媶瑙?, 'https://filesamples.com/samples/video/mp4/sample_960x540.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 11 DAY)),
-(2, 3, '鑻辫浣滄枃楂樺垎寮€澶存€庝箞鍐?, 'https://disk.sample.cat/samples/mp4/1416529-sd_640_360_30fps.mp4', 12, 1, DATE_SUB(NOW(), INTERVAL 10 DAY)),
-(2, 4, '杩炴帴璇嶈娈佃惤鏇磋繛璐?, 'https://disk.sample.cat/samples/mp4/1416529-sd_960_540_30fps.mp4', 12, 1, DATE_SUB(NOW(), INTERVAL 9 DAY));
-
-INSERT INTO `learning_progress` (`user_id`, `course_id`, `video_id`, `position`, `is_completed`, `create_time`, `update_time`) VALUES
-(2, 1, 1, 13, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(2, 1, 2, 7, 0, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(3, 2, 3, 12, 1, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
-
--- 娴嬭瘯閿欓鏈?INSERT INTO `wrong_question` (`user_id`, `subject_id`, `grade_id`, `question_content`, `my_answer`, `correct_answer`, `error_reason`, `mastery_status`, `create_time`, `update_time`) VALUES
-(2, 2, 8, '宸茬煡涓€娆″嚱鏁?y = 2x - 3锛屾眰褰?x = 4 鏃?y 鐨勫€硷紝骞跺垽鏂嚱鏁板鍑忔€с€?, '鎴戠畻鍑?y = 5锛屼絾鏄笉纭畾鍑芥暟鏄笉鏄€掑噺銆?, '褰?x = 4 鏃讹紝y = 5锛涘洜涓?k = 2 > 0锛屾墍浠ュ嚱鏁伴€掑銆?, '鎶婃枩鐜囨璐熷拰澧炲噺鎬у搴斿叧绯昏娣蜂簡銆?, 0, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(3, 3, 10, '璇峰皢鍙ュ瓙 I like sports. 鎵╁啓鎴愪袱鍙ョ浉鍏炽€佽繛璐殑鑻辫琛ㄨ揪銆?, 'I like sports because it good.', 'I like sports very much. They help me stay healthy and make me feel relaxed.', '璋撹褰㈠紡鍜屽師鍥犲彞琛ㄨ揪涓嶅畬鏁淬€?, 1, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(4, 4, 9, '涓€涓湪鍧楅潤姝㈠湪鏂滈潰涓婏紝璇峰垎鏋愬畠鍙楀埌鐨勫姏銆?, '鍙湁閲嶅姏鍜屾敮鎸佸姏銆?, '鏈ㄥ潡鍙楀埌閲嶅姏銆佹枩闈㈢殑鏀寔鍔涳紝浠ュ強娌挎枩闈㈠悜涓婄殑闈欐懇鎿﹀姏銆?, '蹇界暐浜嗛樆纰嶄笅婊戣秼鍔跨殑鎽╂摝鍔涖€?, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
-
--- 娴嬭瘯绛惧埌璁板綍
-INSERT INTO `user_checkin` (`user_id`, `checkin_date`, `points_reward`, `bonus_points`, `streak_days`, `create_time`) VALUES
-(2, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY));
-
--- 娴嬭瘯绉垎鏄庣粏
-INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `remark`, `create_time`) VALUES
-(2, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'), 5, '姣忔棩绛惧埌', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(2, 'POST_CREATE', '1', 3, '鍙戝竷甯栧瓙', DATE_SUB(NOW(), INTERVAL 5 DAY)),
-(2, 'COMMENT_CREATE', '3', 1, '鍙戣〃璇勮', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 'WRONG_QUESTION_CREATE', '1', 2, '娣诲姞閿欓', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(2, 'CHAPTER_COMPLETE', '1', 10, '瀹屾垚璇剧▼绔犺妭', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(3, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '%Y-%m-%d'), 5, '姣忔棩绛惧埌', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(3, 'POST_CREATE', '2', 3, '鍙戝竷甯栧瓙', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(3, 'COMMENT_CREATE', '1', 1, '鍙戣〃璇勮', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(3, 'WRONG_QUESTION_CREATE', '2', 2, '娣诲姞閿欓', DATE_SUB(NOW(), INTERVAL 2 DAY)),
-(3, 'CHAPTER_COMPLETE', '3', 10, '瀹屾垚璇剧▼绔犺妭', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(4, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'), 5, '姣忔棩绛惧埌', DATE_SUB(NOW(), INTERVAL 1 DAY)),
-(4, 'POST_CREATE', '3', 3, '鍙戝竷甯栧瓙', DATE_SUB(NOW(), INTERVAL 3 DAY)),
-(4, 'COMMENT_CREATE', '2', 1, '鍙戣〃璇勮', DATE_SUB(NOW(), INTERVAL 4 DAY)),
-(4, 'WRONG_QUESTION_CREATE', '3', 2, '娣诲姞閿欓', DATE_SUB(NOW(), INTERVAL 1 DAY));
-
--- paid purchase extension
-ALTER TABLE `resource`
-    ADD COLUMN `requires_points` TINYINT DEFAULT 0 COMMENT '鏄惁闇€瑕佺Н鍒嗚喘涔?,
-    ADD COLUMN `points_cost` INT DEFAULT 0 COMMENT '璐拱鎵€闇€绉垎';
-
-ALTER TABLE `course`
-    ADD COLUMN `requires_points` TINYINT DEFAULT 0 COMMENT '鏄惁闇€瑕佽喘涔?,
-    ADD COLUMN `points_cost` INT DEFAULT 0 COMMENT '璇剧▼浠锋牸锛堣櫄鎷熷竵锛?;
-
-DROP TABLE IF EXISTS `resource_purchase`;
-CREATE TABLE `resource_purchase` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `user_id` BIGINT NOT NULL,
-    `resource_id` BIGINT NOT NULL,
-    `points_cost` INT NOT NULL,
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_resource` (`user_id`, `resource_id`),
-    KEY `idx_resource_purchase_user` (`user_id`),
-    KEY `idx_resource_purchase_resource` (`resource_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璧勬枡璐拱璁板綍';
 
 DROP TABLE IF EXISTS `course_purchase`;
-CREATE TABLE `course_purchase` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `order_no` VARCHAR(64) NOT NULL COMMENT '璁㈠崟鍙?,
-    `user_id` BIGINT NOT NULL,
-    `course_id` BIGINT NOT NULL,
-    `points_cost` INT NOT NULL COMMENT '璇剧▼浠锋牸锛堣櫄鎷熷竵锛?,
-    `status` TINYINT NOT NULL DEFAULT 1 COMMENT '璁㈠崟鐘舵€侊細1宸插彂璐?2宸叉敹璐?,
-    `deliver_time` DATETIME DEFAULT NULL COMMENT '鍙戣揣鏃堕棿',
-    `receive_time` DATETIME DEFAULT NULL COMMENT '鏀惰揣鏃堕棿',
-    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP,
+DROP TABLE IF EXISTS `resource_purchase`;
+DROP TABLE IF EXISTS `points_record`;
+DROP TABLE IF EXISTS `user_checkin`;
+DROP TABLE IF EXISTS `wrong_question`;
+DROP TABLE IF EXISTS `learning_progress`;
+DROP TABLE IF EXISTS `course_video`;
+DROP TABLE IF EXISTS `course_chapter`;
+DROP TABLE IF EXISTS `course`;
+DROP TABLE IF EXISTS `chat_message`;
+DROP TABLE IF EXISTS `chat`;
+DROP TABLE IF EXISTS `resource`;
+DROP TABLE IF EXISTS `post_collect`;
+DROP TABLE IF EXISTS `post_like`;
+DROP TABLE IF EXISTS `comment`;
+DROP TABLE IF EXISTS `post`;
+DROP TABLE IF EXISTS `announcement`;
+DROP TABLE IF EXISTS `grade`;
+DROP TABLE IF EXISTS `subject`;
+DROP TABLE IF EXISTS `category`;
+DROP TABLE IF EXISTS `user`;
+
+-- =============================================
+-- 基础表
+-- =============================================
+
+CREATE TABLE `user` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+    `username` VARCHAR(50) NOT NULL COMMENT '用户名',
+    `password` VARCHAR(100) NOT NULL COMMENT '密码哈希',
+    `nickname` VARCHAR(50) DEFAULT NULL COMMENT '昵称',
+    `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像地址',
+    `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号',
+    `bio` VARCHAR(255) DEFAULT NULL COMMENT '个人简介',
+    `points` INT DEFAULT 0 COMMENT '积分余额',
+    `virtual_balance` INT DEFAULT 0 COMMENT '虚拟币余额',
+    `role` TINYINT DEFAULT 0 COMMENT '角色：0学生，1管理员',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0禁用，1正常',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_user_course` (`user_id`, `course_id`),
-    UNIQUE KEY `uk_course_order_no` (`order_no`),
-    KEY `idx_course_purchase_user` (`user_id`),
-    KEY `idx_course_purchase_course` (`course_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='璇剧▼璁㈠崟璁板綍';
+    UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
--- paid sample data for testing
-UPDATE `resource` SET `requires_points` = 1, `points_cost` = 6 WHERE `id` = 2;
-UPDATE `resource` SET `requires_points` = 1, `points_cost` = 14 WHERE `id` = 3;
-UPDATE `course` SET `requires_points` = 1, `points_cost` = 12 WHERE `id` = 2;
+CREATE TABLE `category` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '分类ID',
+    `name` VARCHAR(50) NOT NULL COMMENT '分类名称',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0禁用，1启用',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子分类表';
 
-INSERT INTO `resource` (`name`, `description`, `file_name`, `file_path`, `file_type`, `file_size`, `subject_id`, `grade_id`, `user_id`, `download_count`, `requires_points`, `points_cost`, `create_time`) VALUES
-('鍒濅腑鏁板鍘嬭酱棰橀敊鍥犳竻鍗曪紙绉垎鐗堬級', '閫傚悎鍒濅簩闃舵澶嶇洏鍑芥暟涓庡嚑浣曞帇杞撮鐨勫父瑙侀敊鍥狅紝璐拱鍚庡彲鐩存帴涓嬭浇銆?, 'math-function-summary.txt', 'uploads/resource/demo/math-function-summary.txt', 'txt', 2048, 2, 8, 2, 0, 1, 9, DATE_SUB(NOW(), INTERVAL 1 DAY));
+CREATE TABLE `subject` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '学科ID',
+    `name` VARCHAR(50) NOT NULL COMMENT '学科名称',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0禁用，1启用',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学科表';
 
-INSERT INTO `course` (`name`, `description`, `cover_image`, `teacher_name`, `subject_id`, `grade_id`, `chapter_count`, `student_count`, `requires_points`, `points_cost`, `create_time`, `update_time`) VALUES
-('鍒濅腑鐗╃悊鍙楀姏鍒嗘瀽涓撻」鎻愬崌锛堣櫄鎷熷竵璇撅級', '鍥寸粫鍙楀姏鍒嗘瀽銆佹枩闈㈡懇鎿﹀姏鍜屽鐗╀綋杩炴帴妯″瀷璁捐鐨勮繘闃惰绋嬨€?, 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Physics_classroom.jpg', '鏋楄€佸笀', 4, 9, 1, 0, 1, 16, 16.00, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY));
+CREATE TABLE `grade` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '年级ID',
+    `name` VARCHAR(50) NOT NULL COMMENT '年级名称',
+    `level` VARCHAR(20) NOT NULL COMMENT '学段',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0禁用，1启用',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='年级表';
 
-INSERT INTO `course_chapter` (`course_id`, `title`, `sort`, `create_time`) VALUES
-(3, '鍙楀姏鍒嗘瀽杩涢樁妯℃澘', 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+CREATE TABLE `post` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '帖子ID',
+    `title` VARCHAR(200) NOT NULL COMMENT '标题',
+    `content` TEXT NOT NULL COMMENT '正文内容',
+    `user_id` BIGINT NOT NULL COMMENT '发帖用户ID',
+    `category_id` BIGINT NOT NULL COMMENT '分类ID',
+    `view_count` INT DEFAULT 0 COMMENT '浏览数',
+    `like_count` INT DEFAULT 0 COMMENT '点赞数',
+    `comment_count` INT DEFAULT 0 COMMENT '评论数',
+    `collect_count` INT DEFAULT 0 COMMENT '收藏数',
+    `is_top` TINYINT DEFAULT 0 COMMENT '是否置顶：0否，1是',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_post_user_id` (`user_id`),
+    KEY `idx_post_category_id` (`category_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子表';
 
-INSERT INTO `course_video` (`course_id`, `chapter_id`, `title`, `video_url`, `duration`, `sort`, `create_time`) VALUES
-(3, 5, '涓夋瀹屾垚澶嶆潅鍙楀姏鍒嗘瀽', 'https://filesamples.com/samples/video/mp4/sample_640x360.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 2 DAY));
+CREATE TABLE `comment` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评论ID',
+    `post_id` BIGINT NOT NULL COMMENT '帖子ID',
+    `user_id` BIGINT NOT NULL COMMENT '评论用户ID',
+    `content` VARCHAR(500) NOT NULL COMMENT '评论内容',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_comment_post_id` (`post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
--- extra purchase test accounts
-INSERT INTO `user` (`username`, `password`, `nickname`, `avatar`, `phone`, `bio`, `points`, `virtual_balance`, `role`, `status`)
-SELECT 'points_tester', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', 'Points Tester', 'https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_photography.jpg', '13900000011', 'Manual purchase testing account', 80, 120, 0, 1
-FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM `user` WHERE `username` = 'points_tester');
+CREATE TABLE `post_like` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `post_id` BIGINT NOT NULL COMMENT '帖子ID',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_post_like_user_post` (`user_id`, `post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子点赞记录表';
 
-INSERT INTO `user` (`username`, `password`, `nickname`, `avatar`, `phone`, `bio`, `points`, `virtual_balance`, `role`, `status`)
-SELECT 'points_buyer', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', 'Points Buyer', 'https://upload.wikimedia.org/wikipedia/commons/1/1e/PORTRAIT_PICTURE.jpg', '13900000012', 'Automated purchase verification account', 80, 120, 0, 1
-FROM DUAL
-WHERE NOT EXISTS (SELECT 1 FROM `user` WHERE `username` = 'points_buyer');
+CREATE TABLE `post_collect` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `post_id` BIGINT NOT NULL COMMENT '帖子ID',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_post_collect_user_post` (`user_id`, `post_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='帖子收藏记录表';
 
-INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `remark`)
-SELECT `id`, 'ADMIN_GRANT', 'seed-points-tester-20260403', 80, '鍒濆鍖栨祴璇曠Н鍒?
-FROM `user`
-WHERE `username` = 'points_tester'
-  AND NOT EXISTS (SELECT 1 FROM `points_record` WHERE `action_type` = 'ADMIN_GRANT' AND `biz_id` = 'seed-points-tester-20260403');
+CREATE TABLE `resource` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '资料ID',
+    `name` VARCHAR(200) NOT NULL COMMENT '资料名称',
+    `description` TEXT COMMENT '资料简介',
+    `file_name` VARCHAR(255) NOT NULL COMMENT '原始文件名',
+    `file_path` VARCHAR(500) NOT NULL COMMENT '文件存储路径',
+    `file_type` VARCHAR(20) NOT NULL COMMENT '文件类型',
+    `file_size` BIGINT NOT NULL COMMENT '文件大小（字节）',
+    `subject_id` BIGINT NOT NULL COMMENT '学科ID',
+    `grade_id` BIGINT NOT NULL COMMENT '年级ID',
+    `user_id` BIGINT DEFAULT NULL COMMENT '上传者ID',
+    `download_count` INT DEFAULT 0 COMMENT '下载次数',
+    `requires_points` TINYINT DEFAULT 0 COMMENT '是否需要积分购买：0否，1是',
+    `points_cost` INT DEFAULT 0 COMMENT '积分价格',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_resource_subject_id` (`subject_id`),
+    KEY `idx_resource_grade_id` (`grade_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资料表';
 
-INSERT INTO `points_record` (`user_id`, `action_type`, `biz_id`, `points`, `remark`)
-SELECT `id`, 'ADMIN_GRANT', 'seed-points-buyer-20260403', 80, '鍒濆鍖栨祴璇曠Н鍒?
-FROM `user`
-WHERE `username` = 'points_buyer'
-  AND NOT EXISTS (SELECT 1 FROM `points_record` WHERE `action_type` = 'ADMIN_GRANT' AND `biz_id` = 'seed-points-buyer-20260403');
+CREATE TABLE `chat` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `chat_id` VARCHAR(50) NOT NULL COMMENT '会话唯一标识',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `title` VARCHAR(200) DEFAULT NULL COMMENT '会话标题',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_chat_chat_id` (`chat_id`),
+    KEY `idx_chat_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 会话表';
 
--- normalize all non-admin seeded accounts to password: 123456
-UPDATE `user`
-SET `password` = '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG'
-WHERE `role` <> 1 OR `role` IS NULL;
+CREATE TABLE `chat_message` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `chat_id` VARCHAR(50) NOT NULL COMMENT '会话唯一标识',
+    `role` VARCHAR(20) NOT NULL COMMENT '角色：user / assistant',
+    `content` TEXT NOT NULL COMMENT '消息内容',
+    `image` VARCHAR(500) DEFAULT NULL COMMENT '附带图片地址',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_chat_message_chat_id` (`chat_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI 会话消息表';
 
-UPDATE `user`
-SET `virtual_balance` = COALESCE(`virtual_balance`, 0);
+CREATE TABLE `course` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '课程ID',
+    `name` VARCHAR(200) NOT NULL COMMENT '课程名称',
+    `description` TEXT COMMENT '课程简介',
+    `cover_image` VARCHAR(500) DEFAULT NULL COMMENT '课程封面',
+    `teacher_name` VARCHAR(50) DEFAULT NULL COMMENT '讲师名称',
+    `subject_id` BIGINT NOT NULL COMMENT '学科ID',
+    `grade_id` BIGINT NOT NULL COMMENT '年级ID',
+    `chapter_count` INT DEFAULT 0 COMMENT '章节数',
+    `student_count` INT DEFAULT 0 COMMENT '学习人数',
+    `requires_points` TINYINT DEFAULT 0 COMMENT '兼容旧版字段：是否积分课',
+    `points_cost` INT DEFAULT 0 COMMENT '兼容旧版字段：积分价格',
+    `price_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '课程价格（人民币）',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_course_subject_id` (`subject_id`),
+    KEY `idx_course_grade_id` (`grade_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程表';
 
--- course order migration for RMB pricing
-SET @course_price_amount_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'course'
-      AND COLUMN_NAME = 'price_amount'
-);
-SET @course_price_amount_sql := IF(
-    @course_price_amount_exists = 0,
-    'ALTER TABLE `course` ADD COLUMN `price_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''course price in CNY''',
-    'SELECT 1'
-);
-PREPARE stmt FROM @course_price_amount_sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+CREATE TABLE `course_chapter` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '章节ID',
+    `course_id` BIGINT NOT NULL COMMENT '课程ID',
+    `title` VARCHAR(200) NOT NULL COMMENT '章节标题',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_course_chapter_course_id` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程章节表';
 
-SET @course_purchase_payment_amount_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'course_purchase'
-      AND COLUMN_NAME = 'payment_amount'
-);
-SET @course_purchase_payment_amount_sql := IF(
-    @course_purchase_payment_amount_exists = 0,
-    'ALTER TABLE `course_purchase` ADD COLUMN `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''order amount in CNY''',
-    'SELECT 1'
-);
-PREPARE stmt FROM @course_purchase_payment_amount_sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+CREATE TABLE `course_video` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '视频ID',
+    `course_id` BIGINT NOT NULL COMMENT '课程ID',
+    `chapter_id` BIGINT NOT NULL COMMENT '章节ID',
+    `title` VARCHAR(200) NOT NULL COMMENT '视频标题',
+    `video_url` VARCHAR(500) NOT NULL COMMENT '视频地址',
+    `duration` INT DEFAULT 0 COMMENT '视频时长（秒）',
+    `sort` INT DEFAULT 0 COMMENT '排序值',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_course_video_chapter_id` (`chapter_id`),
+    KEY `idx_course_video_course_id` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程视频表';
 
-SET @course_purchase_paid_time_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'course_purchase'
-      AND COLUMN_NAME = 'paid_time'
-);
-SET @course_purchase_paid_time_sql := IF(
-    @course_purchase_paid_time_exists = 0,
-    'ALTER TABLE `course_purchase` ADD COLUMN `paid_time` DATETIME DEFAULT NULL COMMENT ''payment time''',
-    'SELECT 1'
-);
-PREPARE stmt FROM @course_purchase_paid_time_sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
+CREATE TABLE `learning_progress` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `course_id` BIGINT NOT NULL COMMENT '课程ID',
+    `video_id` BIGINT NOT NULL COMMENT '视频ID',
+    `position` INT DEFAULT 0 COMMENT '播放位置（秒）',
+    `is_completed` TINYINT DEFAULT 0 COMMENT '是否完成：0否，1是',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_learning_progress_user_video` (`user_id`, `video_id`),
+    KEY `idx_learning_progress_user_course` (`user_id`, `course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='学习进度表';
 
-SET @course_purchase_completed_time_exists := (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME = 'course_purchase'
-      AND COLUMN_NAME = 'completed_time'
-);
-SET @course_purchase_completed_time_sql := IF(
-    @course_purchase_completed_time_exists = 0,
-    'ALTER TABLE `course_purchase` ADD COLUMN `completed_time` DATETIME DEFAULT NULL COMMENT ''completion time''',
-    'SELECT 1'
-);
-PREPARE stmt FROM @course_purchase_completed_time_sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-UPDATE `course`
-SET `price_amount` = CASE
-    WHEN `id` = 2 THEN 16.00
-    WHEN `requires_points` = 1 AND `price_amount` = 0 THEN `points_cost`
-    ELSE `price_amount`
-END;
+CREATE TABLE `announcement` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '公告ID',
+    `title` VARCHAR(200) NOT NULL COMMENT '公告标题',
+    `content` TEXT NOT NULL COMMENT '公告内容',
+    `status` TINYINT DEFAULT 1 COMMENT '状态：0下线，1上线',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告表';
 
-UPDATE `course_purchase` cp
-LEFT JOIN `course` c ON c.`id` = cp.`course_id`
-SET cp.`payment_amount` = CASE
-        WHEN cp.`payment_amount` > 0 THEN cp.`payment_amount`
-        WHEN c.`price_amount` > 0 THEN c.`price_amount`
-        ELSE cp.`points_cost`
-    END,
-    cp.`paid_time` = COALESCE(cp.`paid_time`, cp.`deliver_time`),
-    cp.`completed_time` = COALESCE(cp.`completed_time`, cp.`receive_time`),
-    cp.`status` = CASE
-        WHEN cp.`status` = 2 THEN 2
-        WHEN cp.`status` = 1 THEN 1
-        ELSE 0
-    END;
+-- =============================================
+-- 扩展表
+-- =============================================
+
+CREATE TABLE `wrong_question` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '错题ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `subject_id` BIGINT NOT NULL COMMENT '学科ID',
+    `grade_id` BIGINT NOT NULL COMMENT '年级ID',
+    `question_content` TEXT NOT NULL COMMENT '题目内容',
+    `question_image` VARCHAR(500) DEFAULT NULL COMMENT '题目图片',
+    `my_answer` TEXT DEFAULT NULL COMMENT '用户作答',
+    `correct_answer` TEXT NOT NULL COMMENT '正确答案',
+    `error_reason` VARCHAR(255) DEFAULT NULL COMMENT '错因分析',
+    `mastery_status` TINYINT DEFAULT 0 COMMENT '掌握状态：0未掌握，1复习中，2已掌握',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `is_deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除标记',
+    PRIMARY KEY (`id`),
+    KEY `idx_wrong_question_user_id` (`user_id`),
+    KEY `idx_wrong_question_subject_id` (`subject_id`),
+    KEY `idx_wrong_question_grade_id` (`grade_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='错题本表';
+
+CREATE TABLE `user_checkin` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `checkin_date` DATE NOT NULL COMMENT '签到日期',
+    `points_reward` INT DEFAULT 0 COMMENT '基础奖励积分',
+    `bonus_points` INT DEFAULT 0 COMMENT '额外奖励积分',
+    `streak_days` INT DEFAULT 1 COMMENT '连续签到天数',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_user_checkin_user_date` (`user_id`, `checkin_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户签到表';
+
+CREATE TABLE `points_record` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `action_type` VARCHAR(50) NOT NULL COMMENT '动作类型',
+    `biz_id` VARCHAR(64) NOT NULL COMMENT '业务唯一标识',
+    `points` INT NOT NULL COMMENT '积分变化值，正数为增加，负数为扣减',
+    `remark` VARCHAR(255) DEFAULT NULL COMMENT '备注',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_points_record_user_action_biz` (`user_id`, `action_type`, `biz_id`),
+    KEY `idx_points_record_user_time` (`user_id`, `create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='积分流水表';
+
+CREATE TABLE `resource_purchase` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `resource_id` BIGINT NOT NULL COMMENT '资料ID',
+    `points_cost` INT NOT NULL COMMENT '消耗积分',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_resource_purchase_user_resource` (`user_id`, `resource_id`),
+    KEY `idx_resource_purchase_user_id` (`user_id`),
+    KEY `idx_resource_purchase_resource_id` (`resource_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='资料购买记录表';
+
+CREATE TABLE `course_purchase` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `order_no` VARCHAR(64) NOT NULL COMMENT '订单号',
+    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `course_id` BIGINT NOT NULL COMMENT '课程ID',
+    `points_cost` INT NOT NULL COMMENT '兼容旧版字段：订单积分价格',
+    `payment_amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '订单金额（人民币）',
+    `status` TINYINT NOT NULL DEFAULT 0 COMMENT '订单状态：0待支付，1已支付，2已完成',
+    `paid_time` DATETIME DEFAULT NULL COMMENT '支付时间',
+    `completed_time` DATETIME DEFAULT NULL COMMENT '完成时间',
+    `create_time` DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_course_purchase_order_no` (`order_no`),
+    KEY `idx_course_purchase_user_id` (`user_id`),
+    KEY `idx_course_purchase_course_id` (`course_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程订单表';
+
+-- =============================================
+-- 基础字典数据
+-- =============================================
+
+INSERT INTO `subject` (`id`, `name`, `sort`, `status`) VALUES
+(1, '语文', 1, 1),
+(2, '数学', 2, 1),
+(3, '英语', 3, 1),
+(4, '物理', 4, 1),
+(5, '化学', 5, 1),
+(6, '生物', 6, 1),
+(7, '历史', 7, 1),
+(8, '地理', 8, 1),
+(9, '政治', 9, 1);
+
+INSERT INTO `grade` (`id`, `name`, `level`, `sort`, `status`) VALUES
+(1, '一年级', '小学', 1, 1),
+(2, '二年级', '小学', 2, 1),
+(3, '三年级', '小学', 3, 1),
+(4, '四年级', '小学', 4, 1),
+(5, '五年级', '小学', 5, 1),
+(6, '六年级', '小学', 6, 1),
+(7, '初一', '初中', 7, 1),
+(8, '初二', '初中', 8, 1),
+(9, '初三', '初中', 9, 1),
+(10, '高一', '高中', 10, 1),
+(11, '高二', '高中', 11, 1),
+(12, '高三', '高中', 12, 1);
+
+INSERT INTO `category` (`id`, `name`, `sort`, `status`) VALUES
+(1, '综合', 1, 1),
+(2, '数学', 2, 1),
+(3, '英语', 3, 1),
+(4, '物理', 4, 1),
+(5, '化学', 5, 1),
+(6, '语文', 6, 1),
+(7, '生物', 7, 1),
+(8, '历史', 8, 1),
+(9, '地理', 9, 1),
+(10, '政治', 10, 1);
+
+-- =============================================
+-- 用户与公告
+-- =============================================
+
+INSERT INTO `user` (
+    `id`, `username`, `password`, `nickname`, `avatar`, `phone`, `bio`,
+    `points`, `virtual_balance`, `role`, `status`
+) VALUES
+(1, 'admin', '$2a$10$fK5GSp1tp9t4EJVZYzmZeeYO8p7XoLKxi4Y/ZsARHYkgbXWPiD.pO', '管理员', NULL, '13800000000', '平台默认管理员账号', 999, 0, 1, 1),
+(2, 'student_zhang', '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG', '张小雨', 'https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_photography.jpg', '13900000001', '初二学生，擅长整理数学错题。', 42, 120, 0, 1),
+(3, 'student_li', '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG', '李明轩', 'https://upload.wikimedia.org/wikipedia/commons/1/1e/PORTRAIT_PICTURE.jpg', '13900000002', '高一学生，正在提升英语写作和阅读。', 35, 90, 0, 1),
+(4, 'student_wang', '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG', '王可心', 'https://upload.wikimedia.org/wikipedia/commons/6/6d/Portrait_woman.jpg', '13900000003', '初三学生，常用平台复习物理和化学。', 28, 60, 0, 1),
+(5, 'points_tester', '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG', '积分测试员', 'https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_photography.jpg', '13900000011', '用于测试积分购买资料。', 80, 120, 0, 1),
+(6, 'points_buyer', '$2a$10$gPu6w6pQ//3Ry6u9AIaExOzNPtlWv3oxGH9gQ8fIOVUjP9n6puWhG', '订单测试员', 'https://upload.wikimedia.org/wikipedia/commons/1/1e/PORTRAIT_PICTURE.jpg', '13900000012', '用于测试课程下单与支付流程。', 80, 120, 0, 1);
+
+INSERT INTO `announcement` (`id`, `title`, `content`, `status`, `create_time`) VALUES
+(1, '欢迎使用优答答疑平台', '欢迎来到优答。你可以在这里提问、学习课程、下载资料并记录错题。建议在提问时补充年级、学科、题目原文和你的思路，这样更容易获得高质量回答。', 1, DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(2, '平台使用说明', '课程、资料和社区模块都已开启。部分资料和课程需要购买后解锁，请先登录账号，再进行积分兑换或课程下单。', 1, DATE_SUB(NOW(), INTERVAL 10 DAY));
+
+-- =============================================
+-- 社区示例数据
+-- =============================================
+
+INSERT INTO `post` (
+    `id`, `title`, `content`, `user_id`, `category_id`,
+    `view_count`, `like_count`, `comment_count`, `collect_count`, `is_top`,
+    `create_time`, `update_time`
+) VALUES
+(1, '初二数学：一次函数总是看图就乱，怎么快速判断增减性？', '我现在一看到一次函数图像就紧张，尤其是题目把文字条件和图像放在一起的时候，总担心符号判断错。有没有固定步骤可以先看斜率、再看截距，最后再判断增减性？', 2, 2, 126, 2, 2, 1, 1, DATE_SUB(NOW(), INTERVAL 20 DAY), DATE_SUB(NOW(), INTERVAL 20 DAY)),
+(2, '英语作文总写不长，怎样把句子写得更完整？', '每次写英语作文都只有几句简单句，老师说内容太单薄。我想知道平时应该怎么积累连接词和扩写句型，才能把一段话写完整。', 3, 3, 84, 1, 1, 1, 0, DATE_SUB(NOW(), INTERVAL 19 DAY), DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(3, '物理受力分析总漏力，大家有什么检查方法？', '做受力分析题时，我经常把支持力和摩擦力漏掉，尤其是斜面和多个物体相连的时候。有没有一套从研究对象到画图标注的检查顺序？', 4, 4, 56, 1, 1, 1, 0, DATE_SUB(NOW(), INTERVAL 18 DAY), DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(4, '平台答疑区发帖规范说明', '提问时建议补充年级、学科、题目原文和自己的思路。这样更容易得到准确、可执行的解答，也方便其他同学检索相似问题。', 1, 1, 32, 0, 0, 0, 0, DATE_SUB(NOW(), INTERVAL 17 DAY), DATE_SUB(NOW(), INTERVAL 17 DAY));
+
+INSERT INTO `comment` (`id`, `post_id`, `user_id`, `content`, `create_time`) VALUES
+(1, 1, 3, '先判断斜率 k 的正负，再看图像是左低右高还是左高右低，最后结合题目给的点去验证，一般不会错。', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(2, 1, 4, '我会先画一个最简单的坐标系，把题目里的关键点标出来，再决定增减性，这样会稳很多。', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(3, 2, 2, '可以准备一个连接词小卡片，比如 firstly、in addition、as a result，写作时很实用。', DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(4, 3, 2, '建议每次都先写研究对象，再列接触面和外力来源，尤其别忘了支持力和摩擦力。', DATE_SUB(NOW(), INTERVAL 17 DAY));
+
+INSERT INTO `post_like` (`id`, `user_id`, `post_id`, `create_time`) VALUES
+(1, 3, 1, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(2, 4, 1, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(3, 2, 2, DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(4, 3, 3, DATE_SUB(NOW(), INTERVAL 17 DAY));
+
+INSERT INTO `post_collect` (`id`, `user_id`, `post_id`, `create_time`) VALUES
+(1, 3, 1, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(2, 2, 2, DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(3, 4, 2, DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(4, 2, 3, DATE_SUB(NOW(), INTERVAL 17 DAY));
+
+-- =============================================
+-- 资料与 AI 对话数据
+-- =============================================
+
+INSERT INTO `resource` (
+    `id`, `name`, `description`, `file_name`, `file_path`, `file_type`, `file_size`,
+    `subject_id`, `grade_id`, `user_id`, `download_count`, `requires_points`, `points_cost`, `create_time`
+) VALUES
+(1, '一次函数知识清单', '适合初二复习的一次函数核心考点总结，包含斜率、截距、图像判定和常见陷阱。', 'math-function-summary.txt', 'uploads/resource/demo/math-function-summary.txt', 'txt', 2048, 2, 8, 2, 15, 0, 0, DATE_SUB(NOW(), INTERVAL 16 DAY)),
+(2, '英语作文扩写连接词模板', '整理了英文写作中常见的连接词、扩写句型和段落衔接表达，适合高一到高三使用。', 'english-writing-links.txt', 'uploads/resource/demo/english-writing-links.txt', 'txt', 1536, 3, 10, 3, 11, 1, 6, DATE_SUB(NOW(), INTERVAL 15 DAY)),
+(3, '物理受力分析检查表', '按研究对象、受力来源、方向判断和易漏项四个步骤设计的清单，便于错题复盘。', 'physics-force-template.txt', 'uploads/resource/demo/physics-force-template.txt', 'txt', 1890, 4, 9, 4, 9, 1, 14, DATE_SUB(NOW(), INTERVAL 14 DAY)),
+(4, '化学实验现象速记表', '把常见初中化学实验现象整理成一页表格，适合考前速查。', 'chemistry-lab-observation.txt', 'uploads/resource/demo/chemistry-lab-observation.txt', 'txt', 1720, 5, 9, 1, 6, 0, 0, DATE_SUB(NOW(), INTERVAL 13 DAY));
+
+INSERT INTO `chat` (`id`, `chat_id`, `user_id`, `title`, `create_time`, `update_time`) VALUES
+(1, 'chat_seed_001', 2, '一次函数看图题怎么拆解', DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(2, 'chat_seed_002', 3, '英语作文如何扩写句子', DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY));
+
+INSERT INTO `chat_message` (`id`, `chat_id`, `role`, `content`, `create_time`) VALUES
+(1, 'chat_seed_001', 'user', '一次函数图像题总是分不清增减性和截距的作用，应该先看什么？', DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(2, 'chat_seed_001', 'assistant', '先看斜率判断增减性，再看与坐标轴交点，最后把题目给出的点代入验证。按这三个步骤做，图像题会稳定很多。', DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(3, 'chat_seed_002', 'user', '英语作文只有短句，怎么把一段话写得更完整？', DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(4, 'chat_seed_002', 'assistant', '可以先补充原因、结果和例子，再加入连接词，例如 firstly、besides、therefore。这样一段话会更自然也更充实。', DATE_SUB(NOW(), INTERVAL 3 DAY));
+
+-- =============================================
+-- 课程与学习进度数据
+-- =============================================
+
+INSERT INTO `course` (
+    `id`, `name`, `description`, `cover_image`, `teacher_name`, `subject_id`, `grade_id`,
+    `chapter_count`, `student_count`, `requires_points`, `points_cost`, `price_amount`,
+    `create_time`, `update_time`
+) VALUES
+(1, 'MIT 开放课程：固体化学', '整理自公开课资源，适合高中阶段对化学有拓展兴趣的同学。课程内容偏启发式，适合打基础和开阔视野。', '/uploads/course-cover/mit-chemistry.svg', '唐纳德·萨多维', 5, 12, 2, 5, 0, 0, 0.00, DATE_SUB(NOW(), INTERVAL 22 DAY), DATE_SUB(NOW(), INTERVAL 12 DAY)),
+(2, 'MIT 开放课程：非线性规划', '聚焦高中数学中的函数、优化和建模思维，适合想系统提升分析能力的同学。', '/uploads/course-cover/mit-nonlinear.svg', '罗伯特·弗伦德', 2, 12, 2, 5, 1, 12, 16.00, DATE_SUB(NOW(), INTERVAL 20 DAY), DATE_SUB(NOW(), INTERVAL 10 DAY)),
+(3, '初中物理受力分析专项提升', '围绕受力分析、斜面问题和多物体系统设计的专题课程，适合初三冲刺和错题复盘。', 'https://upload.wikimedia.org/wikipedia/commons/4/4e/Physics_classroom.jpg', '林老师', 4, 9, 1, 1, 1, 16, 16.00, DATE_SUB(NOW(), INTERVAL 12 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO `course_chapter` (`id`, `course_id`, `title`, `sort`, `create_time`) VALUES
+(1, 1, '固体结构基础', 1, DATE_SUB(NOW(), INTERVAL 22 DAY)),
+(2, 1, '化学键与材料性质', 2, DATE_SUB(NOW(), INTERVAL 21 DAY)),
+(3, 2, '函数优化入门', 1, DATE_SUB(NOW(), INTERVAL 20 DAY)),
+(4, 2, '约束条件与最值', 2, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(5, 3, '受力分析四步法', 1, DATE_SUB(NOW(), INTERVAL 12 DAY));
+
+INSERT INTO `course_video` (`id`, `course_id`, `chapter_id`, `title`, `video_url`, `duration`, `sort`, `create_time`) VALUES
+(1, 1, 1, '晶体结构与晶胞概念', 'https://filesamples.com/samples/video/mp4/sample_640x360.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 22 DAY)),
+(2, 1, 2, '材料性质与化学键关系', 'https://filesamples.com/samples/video/mp4/sample_960x540.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 21 DAY)),
+(3, 2, 3, '非线性规划的基本思路', 'https://disk.sample.cat/samples/mp4/1416529-sd_640_360_30fps.mp4', 12, 1, DATE_SUB(NOW(), INTERVAL 20 DAY)),
+(4, 2, 4, '约束最值题怎么建模', 'https://disk.sample.cat/samples/mp4/1416529-sd_960_540_30fps.mp4', 12, 1, DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(5, 3, 5, '受力分析专项训练', 'https://filesamples.com/samples/video/mp4/sample_640x360.mp4', 13, 1, DATE_SUB(NOW(), INTERVAL 12 DAY));
+
+INSERT INTO `learning_progress` (
+    `id`, `user_id`, `course_id`, `video_id`, `position`, `is_completed`, `create_time`, `update_time`
+) VALUES
+(1, 2, 1, 1, 13, 1, DATE_SUB(NOW(), INTERVAL 5 DAY), DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(2, 2, 1, 2, 7, 0, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY)),
+(3, 3, 2, 3, 12, 1, DATE_SUB(NOW(), INTERVAL 3 DAY), DATE_SUB(NOW(), INTERVAL 3 DAY));
+
+-- =============================================
+-- 错题本与签到积分数据
+-- =============================================
+
+INSERT INTO `wrong_question` (
+    `id`, `user_id`, `subject_id`, `grade_id`, `question_content`, `question_image`,
+    `my_answer`, `correct_answer`, `error_reason`, `mastery_status`, `create_time`, `update_time`
+) VALUES
+(1, 2, 2, 8, '已知一次函数 y = 2x - 3，当 x = 4 时，求 y 的值，并判断函数的增减性。', NULL, '我算出 y = 5，但不确定增减性。', '当 x = 4 时，y = 5；因为 k = 2 > 0，所以函数单调递增。', '斜率和代值都做对了，但没有把“k 大于 0”与图像左低右高联系起来。', 0, DATE_SUB(NOW(), INTERVAL 6 DAY), DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(2, 3, 3, 10, '请把句子 I like sports. 扩写成两句更完整的英语表达。', NULL, 'I like sports because it good.', 'I like sports very much. They help me stay healthy and make me feel relaxed.', '连接词和谓语搭配不准确，句子扩写时缺少原因和结果。', 1, DATE_SUB(NOW(), INTERVAL 4 DAY), DATE_SUB(NOW(), INTERVAL 4 DAY)),
+(3, 4, 4, 9, '斜面上的木块静止不动，请分析它受到哪些力。', NULL, '只写了重力和支持力。', '木块受到重力、支持力，以及沿接触面方向的静摩擦力。', '漏掉了静摩擦力，说明没有先判断接触面和相对运动趋势。', 2, DATE_SUB(NOW(), INTERVAL 2 DAY), DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+INSERT INTO `user_checkin` (
+    `id`, `user_id`, `checkin_date`, `points_reward`, `bonus_points`, `streak_days`, `create_time`
+) VALUES
+(1, 2, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(2, 3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(3, 4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), 5, 0, 1, DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+INSERT INTO `points_record` (
+    `id`, `user_id`, `action_type`, `biz_id`, `points`, `remark`, `create_time`
+) VALUES
+(1, 2, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'), 5, '每日签到', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(2, 2, 'POST_CREATE', '1', 3, '发布帖子', DATE_SUB(NOW(), INTERVAL 20 DAY)),
+(3, 2, 'COMMENT_CREATE', '4', 1, '发表评论', DATE_SUB(NOW(), INTERVAL 17 DAY)),
+(4, 2, 'WRONG_QUESTION_CREATE', '1', 2, '添加错题', DATE_SUB(NOW(), INTERVAL 6 DAY)),
+(5, 2, 'RESOURCE_PURCHASE', '2', -6, '购买资料：英语作文扩写连接词模板', DATE_SUB(NOW(), INTERVAL 5 DAY)),
+(6, 3, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 2 DAY), '%Y-%m-%d'), 5, '每日签到', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(7, 3, 'POST_CREATE', '2', 3, '发布帖子', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(8, 3, 'COMMENT_CREATE', '1', 1, '发表评论', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(9, 3, 'WRONG_QUESTION_CREATE', '2', 2, '添加错题', DATE_SUB(NOW(), INTERVAL 4 DAY)),
+(10, 3, 'CHAPTER_COMPLETE', '3', 10, '完成课程章节', DATE_SUB(NOW(), INTERVAL 3 DAY)),
+(11, 4, 'CHECKIN', DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 1 DAY), '%Y-%m-%d'), 5, '每日签到', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(12, 4, 'POST_CREATE', '3', 3, '发布帖子', DATE_SUB(NOW(), INTERVAL 18 DAY)),
+(13, 4, 'COMMENT_CREATE', '2', 1, '发表评论', DATE_SUB(NOW(), INTERVAL 19 DAY)),
+(14, 4, 'WRONG_QUESTION_CREATE', '3', 2, '添加错题', DATE_SUB(NOW(), INTERVAL 2 DAY)),
+(15, 5, 'ADMIN_GRANT', 'seed-points-tester', 80, '初始化测试积分', DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(16, 6, 'ADMIN_GRANT', 'seed-points-buyer', 80, '初始化测试积分', DATE_SUB(NOW(), INTERVAL 1 DAY));
+
+-- =============================================
+-- 购买记录与订单数据
+-- =============================================
+
+INSERT INTO `resource_purchase` (`id`, `user_id`, `resource_id`, `points_cost`, `create_time`) VALUES
+(1, 2, 2, 6, DATE_SUB(NOW(), INTERVAL 5 DAY));
+
+INSERT INTO `course_purchase` (
+    `id`, `order_no`, `user_id`, `course_id`, `points_cost`, `payment_amount`,
+    `status`, `paid_time`, `completed_time`, `create_time`
+) VALUES
+(1, 'COURSE202604120830001001', 2, 2, 12, 16.00, 1, DATE_SUB(NOW(), INTERVAL 1 DAY), NULL, DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(2, 'COURSE2026041212353013468', 1, 3, 16, 16.00, 2, DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY), DATE_SUB(NOW(), INTERVAL 1 DAY)),
+(3, 'COURSE202604130930001203', 3, 3, 16, 16.00, 0, NULL, NULL, DATE_SUB(NOW(), INTERVAL 2 HOUR));
+
+SET FOREIGN_KEY_CHECKS = 1;
